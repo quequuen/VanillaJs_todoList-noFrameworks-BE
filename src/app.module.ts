@@ -21,6 +21,9 @@
 // export class AppModule {}
 
 import { Module } from '@nestjs/common';
+import { TestController } from './test/test.controller';
 
-@Module({})
+@Module({
+  controllers: [TestController],
+})
 export class AppModule {}
