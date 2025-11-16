@@ -24,3 +24,9 @@ SELECT table_name FROM information_schema.tables
 WHERE table_schema = 'public' 
 AND table_name IN ('users', 'magic_link_tokens');
 
+-- used 컬럼 추가
+ALTER TABLE magic_link_tokens 
+ADD COLUMN used BOOLEAN DEFAULT FALSE;
+
+CREATE INDEX idx_magic_link_used ON magic_link_tokens(used);
+

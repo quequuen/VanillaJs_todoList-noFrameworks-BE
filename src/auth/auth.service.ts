@@ -8,6 +8,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as sgMail from '@sendgrid/mail';
+import { randomUUID } from 'crypto';
 import { User } from '../user/user.entity';
 import { MagicLinkToken } from './entities/magic-link-token.entity';
 import { devLogger } from '../utils/logger';
@@ -20,7 +22,17 @@ export class AuthService {
     private userRepository: Repository<User>,
     @InjectRepository(MagicLinkToken)
     private magicLinkTokenRepository: Repository<MagicLinkToken>,
-  ) {}
+  ) {
+    // SendGrid 초기화 (환경변수가 있으면)
+    if (process.env.SENDGRID_API_KEY) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      devLogger.log('SendGrid 초기화 완료');
+    } else {
+      devLogger.warn(
+        'SENDGRID_API_KEY가 설정되지 않았습니다. 이메일 발송이 비활성화됩니다.',
+      );
+    }
+  }
 
   // 매직링크 보낼 때 토큰 생성
   async sendMagicLink(email: string): Promise<{ message: string }> {
@@ -49,30 +61,59 @@ export class AuthService {
         devLogger.log(`새로운 사용자 생성: ${email}`);
       }
 
-      // 매직링크 토큰 생성 (15분 만료)
-      const expiresIn = 15 * 60; // 15분
+      // 매직링크 토큰 생성 (10분 만료, 짧은 UUID 사용)
+      const expiresIn = 10 * 60; // 10분
       const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
-      const token = this.jwtService.sign(
-        { email },
-        {
-          secret: process.env.MAGIC_SECRET,
-          expiresIn: `${expiresIn}s`,
-        },
-      );
+      // JWT 대신 짧은 UUID 토큰 사용 (보안 강화)
+      const token = randomUUID(); // 예: "550e8400-e29b-41d4-a716-446655440000"
 
-      // 토큰을 DB에 저장 (1회용 처리)
+      // 토큰을 DB에 저장 (1회용 처리, used: false)
       const magicLinkToken = this.magicLinkTokenRepository.create({
         token,
         email,
         expiresAt,
+        used: false, // 1회용 플래그
       });
       await this.magicLinkTokenRepository.save(magicLinkToken);
 
-      const url = `${process.env.FRONTEND_URL}/verify?token=${token}`;
+      // 이메일 링크는 백엔드 API로 설정 (자동 인증 후 프론트엔드로 리다이렉트)
+      const backendUrl =
+        process.env.BACKEND_URL ||
+        process.env.FRONTEND_URL ||
+        'http://localhost:3000';
+      const url = `${backendUrl}/api/auth/verify?token=${token}`;
 
-      // 이메일 전송 로직 (Nodemailer 등)
-      devLogger.log(`Magic Link URL for ${email}: ${url.substring(0, 50)}...`);
+      devLogger.log(`Magic Link URL for ${email}: ${url}`);
+
+      // 이메일 전송 (SendGrid 사용)
+      if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_SENDER) {
+        try {
+          const msg = {
+            to: email,
+            from: process.env.SENDGRID_SENDER,
+            subject: 'D-3 로그인 링크',
+            html: `
+              <h2>로그인 링크</h2>
+              <p>아래 링크를 클릭하면 로그인됩니다.</p>
+              <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">로그인하기</a>
+              <p>또는 아래 URL을 복사하여 브라우저에 붙여넣으세요:</p>
+              <p style="word-break: break-all;">${url}</p>
+              <p style="color: #666; font-size: 12px;">이 링크는 10분 후 만료되며, 한 번만 사용할 수 있습니다.</p>
+            `,
+          };
+
+          await sgMail.send(msg);
+          devLogger.log(`이메일 발송 성공: ${email}`);
+        } catch (emailError) {
+          devLogger.error('이메일 발송 실패:', emailError);
+        }
+      } else {
+        devLogger.warn(
+          `SENDGRID_API_KEY 또는 SENDGRID_SENDER가 설정되지 않아 이메일을 발송하지 않습니다.`,
+        );
+        devLogger.warn(`매직링크 URL (개발용): ${url}`);
+      }
 
       return { message: '인증 링크가 이메일로 발송되었습니다.' };
     } catch (error) {
@@ -105,19 +146,8 @@ export class AuthService {
   async verifyMagicToken(
     token: string,
   ): Promise<{ message: string; user: { id: number; email: string } }> {
-    // 환경변수 검증
-    if (!process.env.MAGIC_SECRET) {
-      devLogger.error('MAGIC_SECRET environment variable is not set');
-      throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
-    }
-
     try {
-      // 토큰 검증
-      const payload = this.jwtService.verify<{ email: string }>(token, {
-        secret: process.env.MAGIC_SECRET,
-      });
-
-      // DB에서 토큰 조회 (1회용 확인)
+      // DB에서 토큰 조회
       const magicLinkToken = await this.magicLinkTokenRepository.findOne({
         where: { token },
       });
@@ -126,24 +156,29 @@ export class AuthService {
         throw new UnauthorizedException('유효하지 않은 토큰입니다.');
       }
 
+      // 1회용 토큰 확인 (이미 사용된 토큰인지 체크)
+      if (magicLinkToken.used) {
+        throw new UnauthorizedException('이미 사용된 토큰입니다.');
+      }
+
       // 토큰 만료 확인
       if (magicLinkToken.expiresAt < new Date()) {
-        // 만료된 토큰 삭제
-        await this.magicLinkTokenRepository.delete({ token });
+        // 만료된 토큰은 used로 표시 (재사용 방지)
+        await this.magicLinkTokenRepository.update({ token }, { used: true });
         throw new BadRequestException('토큰이 만료되었습니다.');
       }
 
       // 사용자 조회
       const user = await this.userRepository.findOne({
-        where: { email: payload.email },
+        where: { email: magicLinkToken.email },
       });
 
       if (!user) {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
       }
 
-      // 1회용 토큰 삭제 (재사용 방지)
-      await this.magicLinkTokenRepository.delete({ token });
+      // 1회용 토큰 사용 처리 (used: true로 변경, 삭제하지 않음 - 감사 로그용)
+      await this.magicLinkTokenRepository.update({ token }, { used: true });
 
       devLogger.log(`사용자 인증 완료: ${user.email}`);
 
@@ -162,7 +197,7 @@ export class AuthService {
         throw error;
       }
 
-      // JWT 검증 실패 등
+      // 기타 오류
       devLogger.error('토큰 검증 중 오류:', error);
       throw new UnauthorizedException('유효하지 않은 토큰입니다.');
     }
