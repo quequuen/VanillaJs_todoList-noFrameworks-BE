@@ -1,18 +1,28 @@
-// 매직링크 토큰 생성/검증, 이메일 발송
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as sgMail from '@sendgrid/mail';
 
 @Injectable()
-export class AuthService {
-  constructor(private jwtService: JwtService) {}
+export class MagicLinkService {
+  constructor(private jwtService: JwtService) {
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY is not set');
+    }
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  }
 
-  // 매직링크 보낼 때 토큰 생성
+  // ----------------------------
+  // 1) 매직링크 이메일 보내기
+  // ----------------------------
   async sendMagicLink(email: string) {
     if (!process.env.MAGIC_SECRET) {
       throw new Error('MAGIC_SECRET environment variable is not set');
     }
     if (!process.env.FRONTEND_URL) {
       throw new Error('FRONTEND_URL environment variable is not set');
+    }
+    if (!process.env.SENDGRID_SENDER) {
+      throw new Error('SENDGRID_SENDER is not set');
     }
 
     const token = this.jwtService.sign(
@@ -25,13 +35,26 @@ export class AuthService {
 
     const url = `${process.env.FRONTEND_URL}/magic-login?token=${token}`;
 
-    // 이메일 전송 로직 (Nodemailer 등)
-    console.log('Magic Link URL:', url);
+    const msg = {
+      to: email,
+      from: process.env.SENDGRID_SENDER, // 인증된 발신자
+      subject: 'Your Magic Login Link',
+      html: `
+        <h2>로그인 링크</h2>
+        <p>아래 링크를 클릭하면 로그인됩니다.</p>
+        <a href="${url}">${url}</a>
+        <p>10분 후 만료됩니다.</p>
+      `,
+    };
+
+    await sgMail.send(msg);
 
     return { message: 'Magic link sent' };
   }
 
-  //프론트에서 토큰 검증
+  // ----------------------------
+  // 2) 프론트에서 token 받아서 검증
+  // ----------------------------
   async verifyMagicToken(token: string) {
     if (!process.env.MAGIC_SECRET) {
       throw new Error('MAGIC_SECRET environment variable is not set');
@@ -44,7 +67,7 @@ export class AuthService {
       secret: process.env.MAGIC_SECRET,
     });
 
-    //실제 로그인 JWT 발급
+    // 실제 로그인 access token 발급
     const accessToken = this.jwtService.sign(
       { email: payload.email },
       { secret: process.env.JWT_SECRET, expiresIn: '7d' },
