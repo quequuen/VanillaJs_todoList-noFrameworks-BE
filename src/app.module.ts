@@ -71,7 +71,7 @@ validateEnvironmentVariables();
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       entities: [User, MagicLinkToken],
-      synchronize: process.env.NODE_ENV !== 'production', // 프로덕션에서는 false
+      synchronize: true, // TODO: 테이블 생성 후 false로 변경
       logging: process.env.NODE_ENV === 'development',
     }),
     AuthModule,
