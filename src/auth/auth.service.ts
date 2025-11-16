@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 import { randomUUID } from 'crypto';
 import { User } from '../user/user.entity';
 import { MagicLinkToken } from './entities/magic-link-token.entity';
@@ -23,7 +23,7 @@ export class AuthService {
     @InjectRepository(MagicLinkToken)
     private magicLinkTokenRepository: Repository<MagicLinkToken>,
   ) {
-    // SendGrid 초기화 (환경변수가 있으면)
+    // SendGrid 초기화
     if (process.env.SENDGRID_API_KEY) {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
       devLogger.log('SendGrid 초기화 완료');

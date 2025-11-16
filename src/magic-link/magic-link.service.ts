@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 
 @Injectable()
 export class MagicLinkService {
@@ -11,9 +11,6 @@ export class MagicLinkService {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   }
 
-  // ----------------------------
-  // 1) 매직링크 이메일 보내기
-  // ----------------------------
   async sendMagicLink(email: string) {
     if (!process.env.MAGIC_SECRET) {
       throw new Error('MAGIC_SECRET environment variable is not set');
@@ -52,10 +49,7 @@ export class MagicLinkService {
     return { message: 'Magic link sent' };
   }
 
-  // ----------------------------
-  // 2) 프론트에서 token 받아서 검증
-  // ----------------------------
-  async verifyMagicToken(token: string) {
+  verifyMagicToken(token: string): { accessToken: string } {
     if (!process.env.MAGIC_SECRET) {
       throw new Error('MAGIC_SECRET environment variable is not set');
     }
@@ -63,16 +57,15 @@ export class MagicLinkService {
       throw new Error('JWT_SECRET environment variable is not set');
     }
 
-    const payload = this.jwtService.verify(token, {
+    const payload = this.jwtService.verify<{ email: string }>(token, {
       secret: process.env.MAGIC_SECRET,
     });
 
     // 실제 로그인 access token 발급
-    const accessToken = this.jwtService.sign(
+    const accessToken = this.jwtService.sign<{ email: string }>(
       { email: payload.email },
       { secret: process.env.JWT_SECRET, expiresIn: '7d' },
     );
-
     return { accessToken };
   }
 }

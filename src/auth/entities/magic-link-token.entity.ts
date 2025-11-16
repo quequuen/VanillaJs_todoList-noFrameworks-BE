@@ -11,7 +11,7 @@ import {
 @Index(['used'])
 export class MagicLinkToken {
   @PrimaryColumn()
-  token: string; // 짧은 UUID 토큰 (JWT 대신)
+  token: string; // UUID 토큰
 
   @Column()
   email: string;
