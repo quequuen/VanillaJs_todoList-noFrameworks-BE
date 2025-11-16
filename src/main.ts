@@ -4,10 +4,14 @@ import { AppModule } from './app.module';
 import { devLogger } from './utils/logger';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT || 3000;
+
+  // 전역 예외 필터 설정 (에러 로깅 개선)
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Validation Pipe 전역 설정
   app.useGlobalPipes(

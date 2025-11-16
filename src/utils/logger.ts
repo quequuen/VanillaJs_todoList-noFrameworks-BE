@@ -1,57 +1,45 @@
 /**
- * 개발 모드에서만 동작하는 로거
- * 프로덕션 빌드 시에는 로그가 출력되지 않습니다.
+ * 임시: 프로덕션 환경에서도 디버깅을 위해 항상 로그 출력
+ * TODO: 디버깅 완료 후 개발 모드에서만 출력하도록 복원
  */
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 /**
- * 개발 환경에서만 로그 출력
+ * 로그 출력 (임시로 모든 환경에서 출력)
  */
 export const devLogger = {
   /**
    * 일반 로그
    */
   log: (...args: unknown[]): void => {
-    if (isDev) {
-      console.log('[DEV]', ...args);
-    }
+    console.log('[LOG]', ...args);
   },
 
   /**
    * 에러 로그
    */
   error: (...args: unknown[]): void => {
-    if (isDev) {
-      console.error('[DEV ERROR]', ...args);
-    }
+    console.error('[ERROR]', ...args);
   },
 
   /**
    * 경고 로그
    */
   warn: (...args: unknown[]): void => {
-    if (isDev) {
-      console.warn('[DEV WARN]', ...args);
-    }
+    console.warn('[WARN]', ...args);
   },
 
   /**
    * 정보 로그
    */
   info: (...args: unknown[]): void => {
-    if (isDev) {
-      console.info('[DEV INFO]', ...args);
-    }
+    console.info('[INFO]', ...args);
   },
 
   /**
    * 디버그 로그
    */
   debug: (...args: unknown[]): void => {
-    if (isDev) {
-      console.debug('[DEV DEBUG]', ...args);
-    }
+    console.debug('[DEBUG]', ...args);
   },
 };
 

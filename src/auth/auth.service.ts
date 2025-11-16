@@ -77,7 +77,27 @@ export class AuthService {
       return { message: '인증 링크가 이메일로 발송되었습니다.' };
     } catch (error) {
       devLogger.error('매직링크 발송 중 오류:', error);
-      throw new InternalServerErrorException('매직링크 발송에 실패했습니다.');
+
+      // DB 연결 오류인 경우
+      if (error instanceof Error && error.message.includes('connect')) {
+        throw new InternalServerErrorException(
+          '데이터베이스 연결에 실패했습니다.',
+        );
+      }
+
+      // 이미 HttpException인 경우 그대로 throw
+      if (
+        error instanceof InternalServerErrorException ||
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // 기타 오류
+      throw new InternalServerErrorException(
+        `매직링크 발송에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+      );
     }
   }
 
@@ -149,7 +169,7 @@ export class AuthService {
   }
 
   // 로그아웃 (세션 삭제는 main.ts의 세션 미들웨어에서 처리)
-  async logout(): Promise<{ message: string }> {
-    return { message: '로그아웃되었습니다.' };
+  logout(): Promise<{ message: string }> {
+    return Promise.resolve({ message: '로그아웃되었습니다.' });
   }
 }

@@ -24,8 +24,12 @@ export class MagicLinkController {
   })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async sendMagicLink(@Body('email') email: string) {
-    const dto = { email } as SendMagicLinkDto;
-    return this.authService.sendMagicLink(dto.email);
+    try {
+      const dto = { email } as SendMagicLinkDto;
+      return await this.authService.sendMagicLink(dto.email);
+    } catch (error) {
+      throw error;
+    }
   }
 
   // 매직링크 검증
