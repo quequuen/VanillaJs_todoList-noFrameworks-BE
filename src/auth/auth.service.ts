@@ -86,6 +86,17 @@ export class AuthService {
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 
+      // 환경변수 디버깅 (보안을 위해 마스킹)
+      devLogger.log('환경변수 확인:', {
+        hasSENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+        hasSENDGRID_SENDER: !!process.env.SENDGRID_SENDER,
+        SENDGRID_API_KEY_length: process.env.SENDGRID_API_KEY?.length || 0,
+        SENDGRID_SENDER_value: process.env.SENDGRID_SENDER || 'undefined',
+        SENDGRID_API_KEY_prefix: process.env.SENDGRID_API_KEY
+          ? process.env.SENDGRID_API_KEY.substring(0, 5) + '...'
+          : 'undefined',
+      });
+
       // 이메일 전송 (SendGrid 사용)
       if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_SENDER) {
         try {
