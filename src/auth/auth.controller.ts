@@ -8,6 +8,7 @@ import {
   UsePipes,
   ValidationPipe,
   BadRequestException,
+  UnauthorizedException,
   Req,
   Res,
 } from '@nestjs/common';
@@ -143,6 +144,20 @@ export class AuthController {
     }
 
     return result;
+  }
+
+  // 현재 로그인한 사용자 정보 조회 (세션 기반)
+  @Get('me')
+  getCurrentUser(@Req() req: Request) {
+    if (!req.session?.userId) {
+      throw new UnauthorizedException('로그인이 필요합니다.');
+    }
+
+    return {
+      id: req.session.userId,
+      email: req.session.email,
+      createdAt: req.session.createdAt,
+    };
   }
 
   // 로그아웃
