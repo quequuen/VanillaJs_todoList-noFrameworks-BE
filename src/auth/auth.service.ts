@@ -66,7 +66,7 @@ export class AuthService {
       const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
       // JWT 대신 짧은 UUID 토큰 사용 (보안 강화)
-      const token = randomUUID(); // 예: "550e8400-e29b-41d4-a716-446655440000"
+      const token = randomUUID();
 
       // 토큰을 DB에 저장 (1회용 처리, used: false)
       const magicLinkToken = this.magicLinkTokenRepository.create({
@@ -78,11 +78,15 @@ export class AuthService {
       await this.magicLinkTokenRepository.save(magicLinkToken);
 
       // 이메일 링크는 백엔드 API로 설정 (자동 인증 후 프론트엔드로 리다이렉트)
-      const backendUrl =
-        process.env.BACKEND_URL ||
-        process.env.FRONTEND_URL ||
-        'http://localhost:3000';
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
       const url = `${backendUrl}/api/auth/verify?token=${token}`;
+
+      // BACKEND_URL이 설정되지 않았으면 경고
+      if (!process.env.BACKEND_URL && process.env.NODE_ENV === 'production') {
+        devLogger.error(
+          'BACKEND_URL 환경변수가 설정되지 않았습니다. 이메일 링크가 제대로 작동하지 않을 수 있습니다.',
+        );
+      }
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 

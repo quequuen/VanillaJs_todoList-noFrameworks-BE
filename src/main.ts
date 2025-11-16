@@ -65,11 +65,15 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      // 헬스체크 요청 (HEAD, GET /) 허용
-      // Render나 로드밸런서의 헬스체크는 origin이 없을 수 있음
-      if (!origin) {
-        // 프로덕션에서도 헬스체크용으로 허용
+      // 개발 환경에서는 origin이 없어도 허용 (Postman 등)
+      if (!origin && process.env.NODE_ENV !== 'production') {
         callback(null, true);
+        return;
+      }
+
+      // 프로덕션에서는 origin 필수
+      if (!origin) {
+        callback(new Error('Origin이 필요합니다.'));
         return;
       }
 
