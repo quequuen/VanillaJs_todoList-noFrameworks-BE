@@ -77,16 +77,10 @@ export class AuthService {
       });
       await this.magicLinkTokenRepository.save(magicLinkToken);
 
-      // 이메일 링크는 백엔드 API로 설정 (자동 인증 후 프론트엔드로 리다이렉트)
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-      const url = `${backendUrl}/api/auth/verify?token=${token}`;
-
-      // BACKEND_URL이 설정되지 않았으면 경고
-      if (!process.env.BACKEND_URL && process.env.NODE_ENV === 'production') {
-        devLogger.error(
-          'BACKEND_URL 환경변수가 설정되지 않았습니다. 이메일 링크가 제대로 작동하지 않을 수 있습니다.',
-        );
-      }
+      // 이메일 링크는 프론트엔드 도메인으로 설정
+      // 프론트엔드는 token을 받아 백엔드의 /api/auth/verify-api로 호출하여 인증 처리
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
+      const url = `${frontendUrl}?token=${token}`;
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 
