@@ -45,9 +45,10 @@ async function bootstrap() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
-        secure: isProduction, // HTTPS 환경에서만 전송
-        sameSite: 'lax', // CORS 환경에 맞게 설정
+        secure: isProduction, // HTTPS 환경에서만 전송 (크로스 도메인 필수)
+        sameSite: isProduction ? 'none' : 'lax', // 크로스 도메인 지원 (프로덕션: none, 개발: lax)
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+        domain: undefined, // 모든 도메인에서 쿠키 전송 허용 (크로스 도메인)
       },
       name: 'sessionId', // 기본값 'connect.sid' 대신 커스텀 이름
     }),

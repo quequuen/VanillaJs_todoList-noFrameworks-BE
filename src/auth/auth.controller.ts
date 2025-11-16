@@ -93,10 +93,20 @@ export class AuthController {
         req.session.email = result.user.email;
         req.session.createdAt = new Date();
 
+        devLogger.log('세션 정보 저장:', {
+          sessionId: req.session.id,
+          userId: req.session.userId,
+          email: req.session.email,
+        });
+
         // 세션 저장 후 리다이렉트
         req.session.save((err) => {
           if (err) {
             devLogger.error('세션 저장 중 오류:', err);
+          } else {
+            devLogger.log('세션 저장 완료, 쿠키 설정 확인:', {
+              sessionCookie: req.session.id,
+            });
           }
 
           // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
@@ -108,6 +118,7 @@ export class AuthController {
           res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
         });
       } else {
+        devLogger.error('세션이 없습니다!');
         // 세션이 없으면 직접 리다이렉트
         const defaultUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
         const safeUrl = this.validateRedirectUrl(redirectUrl || defaultUrl);
@@ -149,7 +160,22 @@ export class AuthController {
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
   @Get('me')
   getCurrentUser(@Req() req: Request) {
+    // 세션 디버깅 로그
+    devLogger.log('GET /api/auth/me 요청:', {
+      hasSession: !!req.session,
+      sessionId: req.session?.id,
+      userId: req.session?.userId,
+      email: req.session?.email,
+      cookies: req.cookies,
+      headers: {
+        cookie: req.headers.cookie,
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+      },
+    });
+
     if (!req.session?.userId) {
+      devLogger.warn('세션에 userId가 없습니다.');
       throw new UnauthorizedException('로그인이 필요합니다.');
     }
 
