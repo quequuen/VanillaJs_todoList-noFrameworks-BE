@@ -105,14 +105,39 @@ export class AuthService {
 
           await sgMail.send(msg);
           devLogger.log(`이메일 발송 성공: ${email}`);
-        } catch (emailError) {
-          devLogger.error('이메일 발송 실패:', emailError);
+        } catch (emailError: unknown) {
+          // SendGrid 에러 상세 로깅
+          const errorMessage =
+            emailError instanceof Error
+              ? emailError.message
+              : '알 수 없는 에러';
+          const errorResponse =
+            emailError &&
+            typeof emailError === 'object' &&
+            'response' in emailError
+              ? (emailError.response as { body?: unknown })
+              : null;
+
+          devLogger.error('이메일 발송 실패:', {
+            email,
+            error: errorMessage,
+            response: errorResponse?.body,
+            fullError: emailError,
+          });
+
+          // 이메일 발송 실패 시 예외 throw (사용자에게 에러 알림)
+          throw new InternalServerErrorException(
+            `이메일 발송에 실패했습니다: ${errorMessage}`,
+          );
         }
       } else {
         devLogger.warn(
           `SENDGRID_API_KEY 또는 SENDGRID_SENDER가 설정되지 않아 이메일을 발송하지 않습니다.`,
         );
         devLogger.warn(`매직링크 URL (개발용): ${url}`);
+        throw new InternalServerErrorException(
+          '이메일 발송 서비스가 설정되지 않았습니다. 관리자에게 문의하세요.',
+        );
       }
 
       return { message: '인증 링크가 이메일로 발송되었습니다.' };
