@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TestController } from './test/test.controller';
 import { AuthModule } from './auth/auth.module';
+import { MagicLinkModule } from './magic-link/magic-link.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -74,6 +75,7 @@ validateEnvironmentVariables();
       logging: process.env.NODE_ENV === 'development',
     }),
     AuthModule,
+    MagicLinkModule,
   ],
   providers: [
     // Rate Limiting 전역 가드
