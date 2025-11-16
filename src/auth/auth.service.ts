@@ -112,8 +112,6 @@ export class AuthService {
               <h2>로그인 링크</h2>
               <p>아래 링크를 클릭하면 로그인됩니다.</p>
               <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">로그인하기</a>
-              <p>또는 아래 URL을 복사하여 브라우저에 붙여넣으세요:</p>
-              <p style="word-break: break-all;">${url}</p>
               <p style="color: #666; font-size: 12px;">이 링크는 10분 후 만료되며, 한 번만 사용할 수 있습니다.</p>
             `,
           };

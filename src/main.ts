@@ -72,9 +72,8 @@ async function bootstrap() {
         return;
       }
 
-      // 프로덕션에서는 origin 필수
       if (!origin) {
-        callback(new Error('Origin이 필요합니다.'));
+        callback(null, true);
         return;
       }
 
