@@ -67,21 +67,114 @@ export class AuthController {
     return this.authService.sendMagicLink(sendMagicLinkDto.email);
   }
 
-  //매직링크 토큰 검증 (GET 요청, 쿼리 파라미터)
-  // 브라우저 직접 접근: 자동 인증 후 프론트엔드로 리다이렉트
+  /**
+   * 에러 HTML 페이지 생성 헬퍼
+   */
+  private generateErrorPage(errorMessage: string, redirectUrl: string): string {
+    const safeRedirectUrl = encodeURI(redirectUrl);
+    const safeErrorMessage = errorMessage.replace(/"/g, '&quot;');
+
+    return `
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="refresh" content="3;url=${safeRedirectUrl}">
+        <title>인증 오류 - D-3</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            }
+            .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            }
+            .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            }
+            h1 {
+            color: #e74c3c;
+            margin-bottom: 16px;
+            font-size: 24px;
+            }
+            .message {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            font-size: 16px;
+            }
+            .redirect-info {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 24px;
+            }
+            .link-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.3s;
+            }
+            .link-button:hover {
+            background: #5568d3;
+            }
+        </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="error-icon">⚠️</div>
+                <h1>인증 오류</h1>
+                <p class="message">${safeErrorMessage}</p>
+                <p class="redirect-info">3초 후 자동으로 이동합니다...</p>
+                <a href="${safeRedirectUrl}" class="link-button">메인으로 돌아가기</a>
+            </div>
+            <script>
+                // JavaScript 리다이렉트 (meta refresh 대비)
+                setTimeout(function() {
+                window.location.href = '${safeRedirectUrl}';
+                }, 3000);
+            </script>
+        </body>
+        </html>
+    `.trim();
+  }
+
+  //매직링크 토큰 검증
+  // 자동 인증 후 프론트엔드로 리다이렉트
   @Get('verify')
   async verifyToken(
     @Query('token') token: string,
-    @Query('redirect') redirectUrl: string | undefined, // 리다이렉트 URL (선택사항, 화이트리스트 검증)
+    @Query('redirect') redirectUrl: string | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    const defaultUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
+    const safeUrl = this.validateRedirectUrl(redirectUrl || defaultUrl);
+
     if (!token) {
-      // 토큰이 없으면 프론트엔드 에러 페이지로 리다이렉트
-      const safeUrl = this.validateRedirectUrl(
-        redirectUrl || process.env.FRONTEND_URL || 'http://localhost:5500',
+      // 토큰이 없으면 HTML 에러 페이지 렌더링
+      const errorPage = this.generateErrorPage(
+        '토큰이 필요합니다. 유효한 인증 링크를 확인해주세요.',
+        safeUrl,
       );
-      return res.redirect(`${safeUrl}?error=토큰이 필요합니다.`);
+      return res.status(400).send(errorPage);
     }
 
     try {
@@ -110,31 +203,22 @@ export class AuthController {
           }
 
           // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
-          const defaultUrl =
-            process.env.FRONTEND_URL || 'http://localhost:5500';
-          const safeUrl = this.validateRedirectUrl(redirectUrl || defaultUrl);
-
           devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
           res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
         });
       } else {
         devLogger.error('세션이 없습니다!');
         // 세션이 없으면 직접 리다이렉트
-        const defaultUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
-        const safeUrl = this.validateRedirectUrl(redirectUrl || defaultUrl);
         res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
       }
     } catch (error) {
       devLogger.error('토큰 검증 실패:', error);
 
-      // 에러 발생 시 프론트엔드 에러 페이지로 리다이렉트
-      const defaultUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
-      const safeUrl = this.validateRedirectUrl(redirectUrl || defaultUrl);
+      // 에러 발생 시 HTML 에러 페이지 렌더링
       const errorMessage =
         error instanceof Error ? error.message : '인증에 실패했습니다.';
-      return res.redirect(
-        `${safeUrl}?error=${encodeURIComponent(errorMessage)}`,
-      );
+      const errorPage = this.generateErrorPage(errorMessage, safeUrl);
+      return res.status(401).send(errorPage);
     }
   }
 

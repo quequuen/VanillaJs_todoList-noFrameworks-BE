@@ -174,7 +174,7 @@ export class AuthService {
     }
   }
 
-  //프론트에서 토큰 검증 및 세션 생성
+  //토큰 검증 및 세션 생성
   async verifyMagicToken(
     token: string,
   ): Promise<{ message: string; user: { id: number; email: string } }> {
