@@ -37,14 +37,14 @@ export class AuthService {
   // 매직링크 보낼 때 토큰 생성
   async sendMagicLink(email: string): Promise<{ message: string }> {
     // 환경변수 검증
-    if (!process.env.MAGIC_SECRET) {
-      devLogger.error('MAGIC_SECRET environment variable is not set');
-      throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
-    }
-    if (!process.env.FRONTEND_URL) {
-      devLogger.error('FRONTEND_URL environment variable is not set');
-      throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
-    }
+    // if (!process.env.MAGIC_SECRET) {
+    //   devLogger.error('MAGIC_SECRET environment variable is not set');
+    //   throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
+    // }
+    // if (!process.env.FRONTEND_URL) {
+    //   devLogger.error('FRONTEND_URL environment variable is not set');
+    //   throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
+    // }
 
     // 이메일 검증 (이중 체크)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -79,7 +79,7 @@ export class AuthService {
 
       // 이메일 링크는 프론트엔드 도메인으로 설정
       // 프론트엔드는 token을 받아 백엔드의 /api/auth/verify-api로 호출하여 인증 처리
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
+      const frontendUrl = process.env.FRONTEND_URL;
       const url = `${frontendUrl}?token=${token}`;
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
@@ -209,7 +209,7 @@ export class AuthService {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
       }
 
-      // 1회용 토큰 사용 처리 (used: true로 변경, 삭제하지 않음 - 감사 로그용)
+      // 1회용 토큰 사용 처리
       await this.magicLinkTokenRepository.update({ token }, { used: true });
 
       devLogger.log(`사용자 인증 완료: ${user.email}`);
