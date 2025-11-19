@@ -8,6 +8,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { User } from './user/user.entity';
 import { MagicLinkToken } from './auth/entities/magic-link-token.entity';
 import { devLogger } from './utils/logger';
+import { TodosModule } from './todos/todos.module';
+import { TodoModule } from './todo/todo.module';
 
 // 환경변수 검증
 function validateEnvironmentVariables() {
@@ -74,6 +76,8 @@ validateEnvironmentVariables();
       logging: process.env.NODE_ENV === 'development',
     }),
     AuthModule,
+    TodosModule,
+    TodoModule,
   ],
   providers: [
     // Rate Limiting 전역 가드
