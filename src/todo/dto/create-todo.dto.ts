@@ -6,5 +6,5 @@ export class CreateTodoDto {
 
   @IsOptional()
   @IsString()
-  content?: string;
+  content: string;
 }
