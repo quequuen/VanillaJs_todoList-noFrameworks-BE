@@ -1,10 +1,9 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateTodoDto {
   @IsString()
   title: string;
 
-  @IsOptional()
   @IsString()
   content: string;
 }

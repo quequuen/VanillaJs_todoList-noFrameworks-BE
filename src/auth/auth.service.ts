@@ -36,16 +36,6 @@ export class AuthService {
 
   // 매직링크 보낼 때 토큰 생성
   async sendMagicLink(email: string): Promise<{ message: string }> {
-    // 환경변수 검증
-    // if (!process.env.MAGIC_SECRET) {
-    //   devLogger.error('MAGIC_SECRET environment variable is not set');
-    //   throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
-    // }
-    // if (!process.env.FRONTEND_URL) {
-    //   devLogger.error('FRONTEND_URL environment variable is not set');
-    //   throw new InternalServerErrorException('서버 설정 오류가 발생했습니다.');
-    // }
-
     // 이메일 검증 (이중 체크)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -55,6 +45,7 @@ export class AuthService {
     try {
       // 사용자 조회 또는 생성
       let user = await this.userRepository.findOne({ where: { email } });
+      devLogger.log({ email, user });
       if (!user) {
         user = this.userRepository.create({ email });
         user = await this.userRepository.save(user);

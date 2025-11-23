@@ -85,55 +85,55 @@ export class AuthController {
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: #333;
             }
             .container {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
+              background: white;
+              border-radius: 12px;
+              padding: 40px;
+              box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+              text-align: center;
+              max-width: 500px;
+              width: 90%;
             }
             .error-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+              font-size: 64px;
+              margin-bottom: 20px;
             }
             h1 {
-            color: #e74c3c;
-            margin-bottom: 16px;
-            font-size: 24px;
+              color: #e74c3c;
+              margin-bottom: 16px;
+              font-size: 24px;
             }
             .message {
-            color: #666;
-            margin-bottom: 30px;
-            line-height: 1.6;
-            font-size: 16px;
+              color: #666;
+              margin-bottom: 30px;
+              line-height: 1.6;
+              font-size: 16px;
             }
             .redirect-info {
-            color: #999;
-            font-size: 14px;
-            margin-bottom: 24px;
+              color: #999;
+              font-size: 14px;
+              margin-bottom: 24px;
             }
             .link-button {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background 0.3s;
+              display: inline-block;
+              padding: 12px 24px;
+              background: #667eea;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: 500;
+              transition: background 0.3s;
             }
             .link-button:hover {
-            background: #5568d3;
+              background: #5568d3;
             }
         </style>
         </head>
