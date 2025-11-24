@@ -117,12 +117,14 @@ async function bootstrap() {
     ) => {
       // origin이 없으면 허용 (OPTIONS preflight, 직접 접근 등)
       if (!origin) {
+        devLogger.log('CORS: origin 없음 - 허용 (OPTIONS preflight 등)');
         callback(null, true);
         return;
       }
 
       // 정확히 일치하는 origin 확인
       if (allowedOrigins.includes(origin)) {
+        devLogger.log(`CORS: 허용된 origin (정확 일치): ${origin}`);
         callback(null, true);
         return;
       }
@@ -131,12 +133,13 @@ async function bootstrap() {
         origin.includes('vanilla-js-todo-list') &&
         origin.includes('.vercel.app')
       ) {
+        devLogger.log(`CORS: 허용된 origin (Vercel 패턴 매칭): ${origin}`);
         callback(null, true);
         return;
       }
 
       // 허용되지 않은 origin
-      devLogger.warn(`CORS 차단: ${origin}`);
+      devLogger.warn(`CORS 차단: ${origin} (허용 목록: ${allowedOrigins.join(', ')})`);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,

@@ -372,6 +372,9 @@ export class AuthController {
               : '없음',
         responseHeaders: {
           'Set-Cookie': setCookieHeaders,
+          'Access-Control-Allow-Origin': res.getHeader(
+            'Access-Control-Allow-Origin',
+          ),
           'Access-Control-Allow-Credentials': res.getHeader(
             'Access-Control-Allow-Credentials',
           ),
