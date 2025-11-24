@@ -294,7 +294,7 @@ export class AuthController {
         setCookieHeader: res.getHeader('Set-Cookie'),
       });
       
-      return res.json(result);
+      res.json(result);
     } else {
       devLogger.error('verify-api: 세션이 없습니다!');
       throw new InternalServerErrorException('세션을 생성할 수 없습니다.');
