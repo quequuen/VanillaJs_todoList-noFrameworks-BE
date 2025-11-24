@@ -139,7 +139,9 @@ async function bootstrap() {
       }
 
       // 허용되지 않은 origin
-      devLogger.warn(`CORS 차단: ${origin} (허용 목록: ${allowedOrigins.join(', ')})`);
+      devLogger.warn(
+        `CORS 차단: ${origin} (허용 목록: ${allowedOrigins.join(', ')})`,
+      );
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
