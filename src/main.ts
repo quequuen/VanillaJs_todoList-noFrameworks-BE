@@ -72,16 +72,31 @@ async function bootstrap() {
         return;
       }
 
+      // 프로덕션에서도 origin이 없으면 허용 (매직링크 직접 클릭 등)
       if (!origin) {
         callback(null, true);
         return;
       }
 
+      // 정확히 일치하는 origin 확인
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+        return;
       }
+
+      // Vercel 프리뷰/개발 브랜치 도메인 허용 (패턴 매칭)
+      // 예: *.vercel.app, *.vercel.app/git-main-*
+      if (
+        origin.includes('vanilla-js-todo-list') &&
+        origin.includes('.vercel.app')
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      // 허용되지 않은 origin
+      devLogger.warn(`CORS 차단: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
