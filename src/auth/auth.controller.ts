@@ -280,16 +280,28 @@ export class AuthController {
             devLogger.log('verify-api: 세션 저장 완료:', {
               sessionId: req.session?.id,
               userId: req.session?.userId,
-              cookieHeader: res.getHeader('Set-Cookie'),
             });
             resolve();
           }
         });
       });
 
+      // 세션 쿠키를 명시적으로 설정 (크로스 도메인 지원)
+      const isProduction = process.env.NODE_ENV === 'production';
+      const sessionId = req.session.id;
+
+      res.cookie('sessionId', sessionId, {
+        httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
+        secure: isProduction, // HTTPS 환경에서만 전송 (크로스 도메인 필수)
+        sameSite: isProduction ? ('none' as const) : ('lax' as const), // 크로스 도메인 지원
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+        path: '/', // 모든 경로에서 쿠키 전송
+        // domain은 명시하지 않음 (크로스 도메인 쿠키 전송을 위해)
+      });
+
       // JSON 응답 반환 (쿠키와 함께)
       const setCookieHeaders = res.getHeader('Set-Cookie');
-      devLogger.log('verify-api: 응답 전송:', {
+      devLogger.log('verify-api: 응답 전송 (쿠키 설정 완료):', {
         sessionId: req.session.id,
         userId: req.session.userId,
         setCookieHeader: setCookieHeaders,
@@ -299,7 +311,6 @@ export class AuthController {
             : Array.isArray(setCookieHeaders)
               ? setCookieHeaders.join('; ')
               : '없음',
-        cookieName: 'sessionId',
       });
 
       res.json(result);

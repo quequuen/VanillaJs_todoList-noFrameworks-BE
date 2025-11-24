@@ -58,6 +58,7 @@ async function bootstrap() {
   // CORS 설정
   const allowedOrigins = [
     'https://vanilla-js-todo-list-no-frameworks.vercel.app', // 프로덕션 프론트엔드
+    'https://vanilla-js-todo-list-no-frameworks-git-main-quequuens-projects.vercel.app', // Vercel 프리뷰/개발 브랜치
     'http://localhost:5500', // 로컬 개발용 (Live Server 등)
     'http://localhost:3000', // 로컬 개발용
   ];
@@ -80,7 +81,6 @@ async function bootstrap() {
       }
 
       // Vercel 프리뷰/개발 브랜치 도메인 허용 (패턴 매칭)
-      // 예: *.vercel.app, *.vercel.app/git-main-*
       if (
         origin.includes('vanilla-js-todo-list') &&
         origin.includes('.vercel.app')
@@ -93,7 +93,7 @@ async function bootstrap() {
       devLogger.warn(`CORS 차단: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     },
-    credentials: true,
+    credentials: true, // 필수! 쿠키 전송 허용
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -108,7 +108,7 @@ async function bootstrap() {
     exposedHeaders: ['Content-Type', 'Authorization', 'Set-Cookie'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
-    maxAge: 86400,
+    maxAge: 86400, // preflight 요청 캐시 시간 (24시간)
   });
 
   await app.listen(port);
