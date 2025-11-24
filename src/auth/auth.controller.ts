@@ -271,7 +271,7 @@ export class AuthController {
       existingCookie: req.cookies?.sessionId || req.headers.cookie,
     });
 
-    // 세션을 재생성하여 쿠키가 확실히 설정되도록 함
+    // 세션을 재생성하여 새 세션 ID 생성 및 쿠키 설정 보장
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => {
         if (err) {
@@ -292,7 +292,7 @@ export class AuthController {
           sessionKeys: Object.keys(req.session),
         });
 
-        // 세션 저장
+        // 세션 저장 (쿠키 설정을 위해 필수)
         req.session.save((saveErr) => {
           if (saveErr) {
             devLogger.error('❌ verify-api: 세션 저장 실패:', saveErr);
@@ -312,9 +312,23 @@ export class AuthController {
             },
           });
 
+          // 세션 터치하여 쿠키 갱신 보장
+          if (req.session.touch) {
+            req.session.touch();
+          }
+
           resolve();
         });
       });
+    });
+
+    // 세션 저장 후 즉시 Set-Cookie 헤더 확인 (디버깅용)
+    // express-session은 세션이 변경되면 자동으로 쿠키를 설정함
+    const immediateHeaders = res.getHeader('Set-Cookie');
+    devLogger.log('🍪 verify-api: 세션 저장 직후 Set-Cookie 헤더:', {
+      sessionId: req.session?.id,
+      hasSetCookie: !!immediateHeaders,
+      setCookieHeader: immediateHeaders,
     });
 
     // express-session은 응답 종료 시점에 쿠키를 설정하므로,
