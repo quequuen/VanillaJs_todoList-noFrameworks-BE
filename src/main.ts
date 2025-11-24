@@ -12,6 +12,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT || 3000;
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Trust Proxy 설정 (Render, Vercel 등 프록시 뒤에 있을 때 필수)
+  // 프록시를 신뢰하여 X-Forwarded-* 헤더를 사용
+  // NestJS에서는 Express 인스턴스에 직접 접근해야 함
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
+  
+  devLogger.log('Trust Proxy 설정 완료 (프록시 신뢰 활성화)');
+
   // 전역 예외 필터 설정 (에러 로깅 개선)
   app.useGlobalFilters(new AllExceptionsFilter());
 
@@ -28,7 +38,6 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // 세션 미들웨어 설정
-  const isProduction = process.env.NODE_ENV === 'production';
   const sessionSecret = process.env.SESSION_SECRET || 'dev-secret-key';
 
   if (!sessionSecret || sessionSecret === 'dev-secret-key') {
@@ -64,6 +73,7 @@ async function bootstrap() {
       secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
+      proxy: true, // 프록시 뒤에 있을 때 설정 (Render, Vercel 등)
       cookie: {
         httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
         secure: isProduction, // HTTPS 환경에서만 전송 (크로스 도메인 필수)
