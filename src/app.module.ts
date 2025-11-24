@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { TestController } from './test/test.controller';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -42,7 +44,7 @@ function validateEnvironmentVariables() {
 validateEnvironmentVariables();
 
 @Module({
-  controllers: [TestController],
+  controllers: [AppController, TestController],
   imports: [
     // 환경변수 설정
     ConfigModule.forRoot({
@@ -78,6 +80,7 @@ validateEnvironmentVariables();
     TodoModule,
   ],
   providers: [
+    AppService,
     // Rate Limiting 전역 가드
     {
       provide: APP_GUARD,
