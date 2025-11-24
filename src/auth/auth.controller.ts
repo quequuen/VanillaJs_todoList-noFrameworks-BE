@@ -258,55 +258,77 @@ export class AuthController {
     const result = await this.authService.verifyMagicToken(token);
 
     // 세션에 사용자 정보 저장 (Cookie 기반 인증)
-    if (req.session) {
-      devLogger.log('🍪 verify-api: 세션 초기 상태:', {
-        hasSession: !!req.session,
-        sessionId: req.session.id,
-        sessionKeys: Object.keys(req.session),
-        origin: req.headers.origin,
-      });
-
-      // 세션에 사용자 정보 저장
-      req.session.userId = result.user.id;
-      req.session.email = result.user.email;
-      req.session.createdAt = new Date();
-
-      devLogger.log('🍪 verify-api: 세션 데이터 설정 완료:', {
-        sessionId: req.session.id,
-        userId: req.session.userId,
-        email: req.session.email,
-        sessionKeys: Object.keys(req.session),
-      });
-
-      // 세션 저장을 Promise로 대기
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) {
-            devLogger.error('❌ verify-api: 세션 저장 실패:', err);
-            reject(err);
-          } else {
-            devLogger.log('✅ verify-api: 세션 저장 성공:', {
-              sessionId: req.session?.id,
-              userId: req.session?.userId,
-              email: req.session?.email,
-              sessionKeys: Object.keys(req.session || {}),
-              sessionData: {
-                userId: req.session?.userId,
-                email: req.session?.email,
-                createdAt: req.session?.createdAt,
-              },
-            });
-            resolve();
-          }
-        });
-      });
-
-      // express-session이 응답 종료 시점에 쿠키를 설정하므로, 응답 완료를 기다림
-      return result;
-    } else {
+    if (!req.session) {
       devLogger.error('verify-api: 세션이 없습니다!');
       throw new InternalServerErrorException('세션을 생성할 수 없습니다.');
     }
+
+    devLogger.log('🍪 verify-api: 세션 초기 상태:', {
+      hasSession: !!req.session,
+      sessionId: req.session.id,
+      sessionKeys: Object.keys(req.session),
+      origin: req.headers.origin,
+      existingCookie: req.cookies?.sessionId || req.headers.cookie,
+    });
+
+    // 세션에 사용자 정보 저장
+    req.session.userId = result.user.id;
+    req.session.email = result.user.email;
+    req.session.createdAt = new Date();
+
+    devLogger.log('🍪 verify-api: 세션 데이터 설정 완료:', {
+      sessionId: req.session.id,
+      userId: req.session.userId,
+      email: req.session.email,
+      sessionKeys: Object.keys(req.session),
+    });
+
+    // 세션 저장을 Promise로 대기
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          devLogger.error('❌ verify-api: 세션 저장 실패:', err);
+          reject(err);
+          return;
+        }
+
+        devLogger.log('✅ verify-api: 세션 저장 성공:', {
+          sessionId: req.session?.id,
+          userId: req.session?.userId,
+          email: req.session?.email,
+          sessionKeys: Object.keys(req.session || {}),
+          sessionData: {
+            userId: req.session?.userId,
+            email: req.session?.email,
+            createdAt: req.session?.createdAt,
+          },
+        });
+
+        // 세션을 터치하여 쿠키 갱신 보장
+        if (req.session.touch) {
+          req.session.touch();
+        }
+
+        resolve();
+      });
+    });
+
+    // 응답 종료 시점에 쿠키가 설정되도록 보장
+    // express-session은 res.end() 호출 시 쿠키를 설정하므로,
+    // 응답이 완료될 때까지 기다려야 함
+    return new Promise((resolve) => {
+      // 응답 종료 이벤트를 감지하여 쿠키 설정 확인
+      res.once('finish', () => {
+        const setCookieHeaders = res.getHeader('Set-Cookie');
+        devLogger.log('🍪 verify-api: 응답 완료 후 Set-Cookie 헤더:', {
+          sessionId: req.session?.id,
+          setCookieHeader: setCookieHeaders,
+          hasSetCookie: !!setCookieHeaders,
+        });
+      });
+
+      resolve(result);
+    });
   }
 
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
