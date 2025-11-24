@@ -68,22 +68,24 @@ export class AuthService {
       });
       await this.magicLinkTokenRepository.save(magicLinkToken);
 
-      // 이메일 링크는 백엔드 도메인으로 설정
-      // 백엔드에서 세션 생성 + Set-Cookie 설정 후 프론트엔드로 리다이렉트
-      let backendUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL; // BACKEND_URL 우선 사용, 없으면 FALLBACK
-      if (!backendUrl) {
-        devLogger.warn('BACKEND_URL 또는 FRONTEND_URL이 설정되지 않았습니다.');
+      // 이메일 링크는 프론트엔드 도메인으로 설정
+      // 프론트엔드에서 verify-api를 호출하여 세션 생성 (크로스 도메인 쿠키 설정)
+      let frontendUrl = process.env.FRONTEND_URL;
+      if (!frontendUrl) {
+        devLogger.warn('FRONTEND_URL이 설정되지 않았습니다.');
       } else {
         // 프로덕션 환경에서는 HTTP를 HTTPS로 강제 변환 (보안)
         const isProduction = process.env.NODE_ENV === 'production';
-        if (isProduction && backendUrl.startsWith('http://')) {
-          backendUrl = backendUrl.replace('http://', 'https://');
+        if (isProduction && frontendUrl.startsWith('http://')) {
+          frontendUrl = frontendUrl.replace('http://', 'https://');
           devLogger.warn(
-            `프로덕션 환경에서 HTTP를 HTTPS로 변환: ${backendUrl}`,
+            `프로덕션 환경에서 HTTP를 HTTPS로 변환: ${frontendUrl}`,
           );
         }
       }
-      const url = `${backendUrl}/api/auth/verify?token=${token}`;
+      // 프론트엔드 URL에 토큰을 쿼리 파라미터로 전달
+      // 프론트엔드에서는 이 토큰을 받아서 /api/auth/verify-api를 호출해야 함
+      const url = `${frontendUrl}?token=${token}`;
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 
