@@ -9,6 +9,7 @@ import {
   ValidationPipe,
   BadRequestException,
   UnauthorizedException,
+  InternalServerErrorException,
   Req,
   Res,
 } from '@nestjs/common';
@@ -214,15 +215,30 @@ export class AuthController {
     } catch (error) {
       devLogger.error('토큰 검증 실패:', error);
 
+      // 에러 타입별로 적절한 상태 코드 설정
+      let statusCode = 401; // 기본값 (인증 오류)
+      let errorMessage = '인증에 실패했습니다.';
+
+      if (error instanceof BadRequestException) {
+        statusCode = 400; // 토큰 만료 등
+        errorMessage = error.message;
+      } else if (error instanceof UnauthorizedException) {
+        statusCode = 401; // 토큰 없음, 사용자 없음, 이미 사용된 토큰 등
+        errorMessage = error.message;
+      } else if (error instanceof InternalServerErrorException) {
+        statusCode = 500; // 서버 오류
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       // 에러 발생 시 HTML 에러 페이지 렌더링
-      const errorMessage =
-        error instanceof Error ? error.message : '인증에 실패했습니다.';
       const errorPage = this.generateErrorPage(errorMessage, safeUrl);
-      return res.status(401).send(errorPage);
+      return res.status(statusCode).send(errorPage);
     }
   }
 
-  // API 호출용 검증 엔드포인트 (프론트엔드에서 프로그래밍 방식으로 호출)
+  // API 호출용 검증 엔드포인트
   @Get('verify-api')
   async verifyTokenApi(@Query('token') token: string, @Req() req: Request) {
     if (!token) {
