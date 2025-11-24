@@ -249,7 +249,8 @@ export class AuthController {
   async verifyTokenApi(
     @Query('token') token: string,
     @Req() req: Request,
-  ): Promise<{ message: string; user: { id: number; email: string } }> {
+    @Res() res: Response,
+  ): Promise<void> {
     if (!token) {
       throw new BadRequestException('토큰이 필요합니다.');
     }
@@ -266,6 +267,7 @@ export class AuthController {
         sessionId: req.session.id,
         userId: req.session.userId,
         email: req.session.email,
+        origin: req.headers.origin,
       });
 
       // 세션 저장을 Promise로 대기
@@ -278,16 +280,25 @@ export class AuthController {
             devLogger.log('verify-api: 세션 저장 완료:', {
               sessionId: req.session?.id,
               userId: req.session?.userId,
+              cookieHeader: res.getHeader('Set-Cookie'),
             });
             resolve();
           }
         });
       });
+
+      // JSON 응답 반환 (쿠키와 함께)
+      devLogger.log('verify-api: 응답 전송:', {
+        sessionId: req.session.id,
+        userId: req.session.userId,
+        setCookieHeader: res.getHeader('Set-Cookie'),
+      });
+      
+      return res.json(result);
     } else {
       devLogger.error('verify-api: 세션이 없습니다!');
+      throw new InternalServerErrorException('세션을 생성할 수 없습니다.');
     }
-
-    return result;
   }
 
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
