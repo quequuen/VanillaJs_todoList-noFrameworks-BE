@@ -249,8 +249,8 @@ export class AuthController {
   async verifyTokenApi(
     @Query('token') token: string,
     @Req() req: Request,
-    @Res() res: Response,
-  ): Promise<void> {
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (!token) {
       throw new BadRequestException('토큰이 필요합니다.');
     }
@@ -296,39 +296,13 @@ export class AuthController {
                 createdAt: req.session?.createdAt,
               },
             });
-
-            // 세션 스토어에 실제로 저장되었는지 확인하기 위해 약간의 지연
-            setTimeout(() => {
-              resolve();
-            }, 100);
+            resolve();
           }
         });
       });
 
-      // express-session이 자동으로 쿠키를 설정하므로, Set-Cookie 헤더 확인
-      const setCookieHeaders = res.getHeader('Set-Cookie');
-      const setCookieString =
-        typeof setCookieHeaders === 'string'
-          ? setCookieHeaders
-          : Array.isArray(setCookieHeaders)
-            ? setCookieHeaders.join('; ')
-            : '없음';
-
-      devLogger.log('🍪 verify-api: 응답 전송 (최종 상태):', {
-        sessionId: req.session.id,
-        userId: req.session.userId,
-        email: req.session.email,
-        setCookieHeader: setCookieHeaders,
-        setCookieString,
-        responseHeaders: {
-          'Set-Cookie': setCookieString,
-          'Access-Control-Allow-Credentials': res.getHeader(
-            'Access-Control-Allow-Credentials',
-          ),
-        },
-      });
-
-      res.json(result);
+      // express-session이 응답 종료 시점에 쿠키를 설정하므로, 응답 완료를 기다림
+      return result;
     } else {
       devLogger.error('verify-api: 세션이 없습니다!');
       throw new InternalServerErrorException('세션을 생성할 수 없습니다.');
