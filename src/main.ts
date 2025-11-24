@@ -5,6 +5,8 @@ import { devLogger } from './utils/logger';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import connectPgSimple from 'connect-pg-simple';
+import { Pool } from 'pg';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -38,8 +40,27 @@ async function bootstrap() {
     );
   }
 
+  // PostgreSQL 세션 스토어 설정
+  const PgSession = connectPgSimple(session);
+  const pool = new Pool({
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+  });
+
+  const sessionStore = new PgSession({
+    pool: pool,
+    tableName: 'session', // 세션 테이블 이름
+    createTableIfMissing: true, // 테이블이 없으면 자동 생성
+  });
+
+  devLogger.log('PostgreSQL 세션 스토어 초기화 완료');
+
   app.use(
     session({
+      store: sessionStore,
       secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
@@ -54,6 +75,8 @@ async function bootstrap() {
       name: 'sessionId', // 기본값 'connect.sid' 대신 커스텀 이름
     }),
   );
+
+  devLogger.log('세션 미들웨어 설정 완료 (PostgreSQL 스토어 사용)');
 
   // CORS 설정
   const allowedOrigins = [
