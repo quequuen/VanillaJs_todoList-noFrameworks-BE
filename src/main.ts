@@ -108,7 +108,7 @@ async function bootstrap() {
     exposedHeaders: ['Content-Type', 'Authorization', 'Set-Cookie'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
-    maxAge: 86400, // preflight 요청 캐시 시간 (24시간)
+    maxAge: 86400,
   });
 
   await app.listen(port);

@@ -288,10 +288,18 @@ export class AuthController {
       });
 
       // JSON 응답 반환 (쿠키와 함께)
+      const setCookieHeaders = res.getHeader('Set-Cookie');
       devLogger.log('verify-api: 응답 전송:', {
         sessionId: req.session.id,
         userId: req.session.userId,
-        setCookieHeader: res.getHeader('Set-Cookie'),
+        setCookieHeader: setCookieHeaders,
+        setCookieHeaderString:
+          typeof setCookieHeaders === 'string'
+            ? setCookieHeaders
+            : Array.isArray(setCookieHeaders)
+              ? setCookieHeaders.join('; ')
+              : '없음',
+        cookieName: 'sessionId',
       });
 
       res.json(result);
@@ -313,6 +321,8 @@ export class AuthController {
       cookies: req.cookies,
       cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
       sessionCookieName: 'sessionId',
+      sessionCookieValue: req.cookies?.sessionId || '없음',
+      rawCookieHeader: req.headers.cookie || '없음',
       headers: {
         cookie: req.headers.cookie,
         origin: req.headers.origin,
