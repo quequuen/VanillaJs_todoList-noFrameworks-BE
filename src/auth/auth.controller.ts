@@ -187,28 +187,34 @@ export class AuthController {
         req.session.email = result.user.email;
         req.session.createdAt = new Date();
 
-        devLogger.log('세션 정보 저장:', {
+        devLogger.log('verify: 세션 정보 저장 시작:', {
           sessionId: req.session.id,
           userId: req.session.userId,
           email: req.session.email,
         });
 
-        // 세션 저장 후 리다이렉트
-        req.session.save((err) => {
-          if (err) {
-            devLogger.error('세션 저장 중 오류:', err);
-          } else {
-            devLogger.log('세션 저장 완료, 쿠키 설정 확인:', {
-              sessionCookie: req.session.id,
-            });
-          }
-
-          // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
-          devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
-          res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
+        // 세션 저장을 Promise로 대기한 후 리다이렉트
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              devLogger.error('verify: 세션 저장 중 오류:', err);
+              reject(err);
+            } else {
+              devLogger.log('verify: 세션 저장 완료:', {
+                sessionId: req.session?.id,
+                userId: req.session?.userId,
+                cookieHeader: res.getHeader('Set-Cookie'),
+              });
+              resolve();
+            }
+          });
         });
+
+        // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
+        devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
+        res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
       } else {
-        devLogger.error('세션이 없습니다!');
+        devLogger.error('verify: 세션이 없습니다!');
         // 세션이 없으면 직접 리다이렉트
         res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
       }

@@ -14,8 +14,13 @@ export class TodoService {
   ) {}
 
   // 전체 조회
-  findAll() {
-    return this.todoRepository.find();
+  async findAll() {
+    try {
+      return await this.todoRepository.find();
+    } catch (error) {
+      devLogger.error('Todo 전체 조회 실패:', error);
+      throw error;
+    }
   }
 
   // 단일 조회

@@ -11,6 +11,7 @@ import {
 import { TodoService } from './todo.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
+import { devLogger } from '../utils/logger';
 
 @Controller('api/todo')
 export class TodoController {
@@ -19,8 +20,16 @@ export class TodoController {
   // todos 조회
   // GET /api/todo
   @Get()
-  getAll() {
-    return this.todoService.findAll();
+  async getAll() {
+    try {
+      devLogger.log('GET /api/todo 요청');
+      const todos = await this.todoService.findAll();
+      devLogger.log(`Todo 조회 성공: ${todos.length}개`);
+      return todos;
+    } catch (error) {
+      devLogger.error('GET /api/todo 실패:', error);
+      throw error;
+    }
   }
 
   // 특정 todo 조회
