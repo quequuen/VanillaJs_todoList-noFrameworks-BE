@@ -85,7 +85,7 @@ async function bootstrap() {
       },
     }),
   );
-  
+
   // 세션 설정 로그 (디버깅용)
   devLogger.log('세션 미들웨어 설정:', {
     proxy: true,

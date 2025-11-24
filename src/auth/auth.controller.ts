@@ -182,42 +182,67 @@ export class AuthController {
       const result = await this.authService.verifyMagicToken(token);
 
       // 세션에 사용자 정보 저장 (Cookie 기반 인증)
-      if (req.session) {
-        req.session.userId = result.user.id;
-        req.session.email = result.user.email;
-        req.session.createdAt = new Date();
-
-        devLogger.log('verify: 세션 정보 저장 시작:', {
-          sessionId: req.session.id,
-          userId: req.session.userId,
-          email: req.session.email,
-        });
-
-        // 세션 저장을 Promise로 대기한 후 리다이렉트
-        await new Promise<void>((resolve, reject) => {
-          req.session.save((err) => {
-            if (err) {
-              devLogger.error('verify: 세션 저장 중 오류:', err);
-              reject(err);
-            } else {
-              devLogger.log('verify: 세션 저장 완료:', {
-                sessionId: req.session?.id,
-                userId: req.session?.userId,
-                cookieHeader: res.getHeader('Set-Cookie'),
-              });
-              resolve();
-            }
-          });
-        });
-
-        // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
-        devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
-        res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
-      } else {
+      if (!req.session) {
         devLogger.error('verify: 세션이 없습니다!');
         // 세션이 없으면 직접 리다이렉트
-        res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
+        res.redirect(`${safeUrl}?error=세션을 생성할 수 없습니다.`);
+        return;
       }
+
+      devLogger.log('verify: 세션 초기 상태:', {
+        hasSession: !!req.session,
+        sessionId: req.session.id,
+        sessionKeys: Object.keys(req.session),
+      });
+
+      // 세션을 재생성하여 새 세션 ID 생성 및 쿠키 설정 보장
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) {
+            devLogger.error('❌ verify: 세션 재생성 실패:', err);
+            reject(err);
+            return;
+          }
+
+          // 재생성된 세션에 사용자 정보 저장
+          req.session.userId = result.user.id;
+          req.session.email = result.user.email;
+          req.session.createdAt = new Date();
+
+          devLogger.log('verify: 세션 재생성 및 데이터 설정 완료:', {
+            sessionId: req.session.id,
+            userId: req.session.userId,
+            email: req.session.email,
+            sessionKeys: Object.keys(req.session),
+          });
+
+          // 세션 저장 (쿠키 설정을 위해 필수)
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              devLogger.error('❌ verify: 세션 저장 실패:', saveErr);
+              reject(saveErr);
+              return;
+            }
+
+            devLogger.log('✅ verify: 세션 저장 성공:', {
+              sessionId: req.session?.id,
+              userId: req.session?.userId,
+              email: req.session?.email,
+            });
+
+            // 세션 터치하여 쿠키 갱신 보장
+            if (req.session.touch) {
+              req.session.touch();
+            }
+
+            resolve();
+          });
+        });
+      });
+
+      // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
+      devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
+      res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
     } catch (error) {
       devLogger.error('토큰 검증 실패:', error);
 
