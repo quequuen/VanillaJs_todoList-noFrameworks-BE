@@ -290,38 +290,22 @@ export class AuthController {
               userId: req.session?.userId,
               email: req.session?.email,
               sessionKeys: Object.keys(req.session || {}),
+              sessionData: {
+                userId: req.session?.userId,
+                email: req.session?.email,
+                createdAt: req.session?.createdAt,
+              },
             });
-            resolve();
+
+            // 세션 스토어에 실제로 저장되었는지 확인하기 위해 약간의 지연
+            setTimeout(() => {
+              resolve();
+            }, 100);
           }
         });
       });
 
-      // 세션 쿠키를 명시적으로 설정 (크로스 도메인 지원)
-      const isProduction = process.env.NODE_ENV === 'production';
-      const sessionId = req.session.id;
-
-      devLogger.log('🍪 verify-api: 쿠키 설정 시작:', {
-        sessionId,
-        isProduction,
-        cookieOptions: {
-          httpOnly: true,
-          secure: isProduction,
-          sameSite: isProduction ? 'none' : 'lax',
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          path: '/',
-        },
-      });
-
-      res.cookie('sessionId', sessionId, {
-        httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
-        secure: isProduction, // HTTPS 환경에서만 전송 (크로스 도메인 필수)
-        sameSite: isProduction ? ('none' as const) : ('lax' as const), // 크로스 도메인 지원
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
-        path: '/', // 모든 경로에서 쿠키 전송
-        // domain은 명시하지 않음 (크로스 도메인 쿠키 전송을 위해)
-      });
-
-      // JSON 응답 반환 (쿠키와 함께)
+      // express-session이 자동으로 쿠키를 설정하므로, Set-Cookie 헤더 확인
       const setCookieHeaders = res.getHeader('Set-Cookie');
       const setCookieString =
         typeof setCookieHeaders === 'string'
@@ -355,6 +339,11 @@ export class AuthController {
   @Get('me')
   getCurrentUser(@Req() req: Request) {
     // 세션 디버깅 로그 (상세)
+    const sessionCookieValue =
+      req.cookies?.sessionId ||
+      req.headers.cookie?.match(/sessionId=([^;]+)/)?.[1] ||
+      '없음';
+
     devLogger.log('🔍 GET /api/auth/me 요청 시작:', {
       hasSession: !!req.session,
       sessionId: req.session?.id,
@@ -364,9 +353,12 @@ export class AuthController {
       cookies: req.cookies,
       cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
       sessionCookieName: 'sessionId',
-      sessionCookieValue: req.cookies?.sessionId || '없음',
+      sessionCookieValue: sessionCookieValue,
+      sessionCookieValueLength: sessionCookieValue.length,
       rawCookieHeader: req.headers.cookie || '없음',
       cookieHeaderLength: req.headers.cookie?.length || 0,
+      // 세션 쿠키 값이 서명되었는지 확인 (express-session은 s: 접두사를 사용)
+      isSignedCookie: sessionCookieValue.startsWith('s:'),
       headers: {
         cookie: req.headers.cookie,
         origin: req.headers.origin,
