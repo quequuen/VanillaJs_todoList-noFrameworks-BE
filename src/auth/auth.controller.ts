@@ -240,7 +240,10 @@ export class AuthController {
 
   // API 호출용 검증 엔드포인트
   @Get('verify-api')
-  async verifyTokenApi(@Query('token') token: string, @Req() req: Request) {
+  async verifyTokenApi(
+    @Query('token') token: string,
+    @Req() req: Request,
+  ): Promise<{ message: string; user: { id: number; email: string } }> {
     if (!token) {
       throw new BadRequestException('토큰이 필요합니다.');
     }
@@ -252,6 +255,30 @@ export class AuthController {
       req.session.userId = result.user.id;
       req.session.email = result.user.email;
       req.session.createdAt = new Date();
+
+      devLogger.log('verify-api: 세션 정보 저장 시작:', {
+        sessionId: req.session.id,
+        userId: req.session.userId,
+        email: req.session.email,
+      });
+
+      // 세션 저장을 Promise로 대기
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            devLogger.error('verify-api: 세션 저장 실패:', err);
+            reject(err);
+          } else {
+            devLogger.log('verify-api: 세션 저장 완료:', {
+              sessionId: req.session?.id,
+              userId: req.session?.userId,
+            });
+            resolve();
+          }
+        });
+      });
+    } else {
+      devLogger.error('verify-api: 세션이 없습니다!');
     }
 
     return result;
@@ -267,17 +294,33 @@ export class AuthController {
       userId: req.session?.userId,
       email: req.session?.email,
       cookies: req.cookies,
+      cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+      sessionCookieName: 'sessionId',
       headers: {
         cookie: req.headers.cookie,
         origin: req.headers.origin,
         referer: req.headers.referer,
+        host: req.headers.host,
       },
     });
 
-    if (!req.session?.userId) {
-      devLogger.warn('세션에 userId가 없습니다.');
+    if (!req.session) {
+      devLogger.warn('세션이 존재하지 않습니다.');
       throw new UnauthorizedException('로그인이 필요합니다.');
     }
+
+    if (!req.session.userId) {
+      devLogger.warn('세션에 userId가 없습니다.', {
+        sessionId: req.session.id,
+        sessionKeys: Object.keys(req.session),
+      });
+      throw new UnauthorizedException('로그인이 필요합니다.');
+    }
+
+    devLogger.log('사용자 정보 반환:', {
+      id: req.session.userId,
+      email: req.session.email,
+    });
 
     return {
       id: req.session.userId,
