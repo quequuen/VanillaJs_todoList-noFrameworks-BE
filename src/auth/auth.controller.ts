@@ -293,7 +293,7 @@ export class AuthController {
         userId: req.session.userId,
         setCookieHeader: res.getHeader('Set-Cookie'),
       });
-      
+
       res.json(result);
     } else {
       devLogger.error('verify-api: 세션이 없습니다!');

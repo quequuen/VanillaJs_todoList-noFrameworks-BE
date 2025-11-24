@@ -67,13 +67,7 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      // 개발 환경에서는 origin이 없어도 허용 (Postman 등)
-      if (!origin && process.env.NODE_ENV !== 'production') {
-        callback(null, true);
-        return;
-      }
-
-      // 프로덕션에서도 origin이 없으면 허용 (매직링크 직접 클릭 등)
+      // origin이 없으면 허용 (OPTIONS preflight, 직접 접근 등)
       if (!origin) {
         callback(null, true);
         return;
@@ -109,10 +103,12 @@ async function bootstrap() {
       'X-Requested-With',
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers',
+      'Cookie',
     ],
-    exposedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Type', 'Authorization', 'Set-Cookie'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
+    maxAge: 86400, // preflight 요청 캐시 시간 (24시간)
   });
 
   await app.listen(port);
