@@ -70,9 +70,18 @@ export class AuthService {
 
       // 이메일 링크는 백엔드 도메인으로 설정
       // 백엔드에서 세션 생성 + Set-Cookie 설정 후 프론트엔드로 리다이렉트
-      const backendUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL; // BACKEND_URL 우선 사용, 없으면 FALLBACK
+      let backendUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL; // BACKEND_URL 우선 사용, 없으면 FALLBACK
       if (!backendUrl) {
         devLogger.warn('BACKEND_URL 또는 FRONTEND_URL이 설정되지 않았습니다.');
+      } else {
+        // 프로덕션 환경에서는 HTTP를 HTTPS로 강제 변환 (보안)
+        const isProduction = process.env.NODE_ENV === 'production';
+        if (isProduction && backendUrl.startsWith('http://')) {
+          backendUrl = backendUrl.replace('http://', 'https://');
+          devLogger.warn(
+            `프로덕션 환경에서 HTTP를 HTTPS로 변환: ${backendUrl}`,
+          );
+        }
       }
       const url = `${backendUrl}/api/auth/verify?token=${token}`;
 
