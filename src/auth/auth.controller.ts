@@ -317,20 +317,30 @@ export class AuthController {
       });
     });
 
-    // 응답 전에 Set-Cookie 헤더 확인
-    const setCookieHeaders = res.getHeader('Set-Cookie');
-    devLogger.log('🍪 verify-api: 응답 전 Set-Cookie 헤더:', {
-      sessionId: req.session?.id,
-      setCookieHeader: setCookieHeaders,
-      hasSetCookie: !!setCookieHeaders,
-      cookieValue:
-        typeof setCookieHeaders === 'string'
-          ? setCookieHeaders
-          : Array.isArray(setCookieHeaders)
-            ? setCookieHeaders[0]
-            : '없음',
+    // express-session은 응답 종료 시점에 쿠키를 설정하므로,
+    // 응답 완료 이벤트를 감지하여 Set-Cookie 헤더 확인
+    res.once('finish', () => {
+      const setCookieHeaders = res.getHeader('Set-Cookie');
+      devLogger.log('🍪 verify-api: 응답 완료 후 Set-Cookie 헤더:', {
+        sessionId: req.session?.id,
+        setCookieHeader: setCookieHeaders,
+        hasSetCookie: !!setCookieHeaders,
+        cookieValue:
+          typeof setCookieHeaders === 'string'
+            ? setCookieHeaders
+            : Array.isArray(setCookieHeaders)
+              ? setCookieHeaders.join('; ')
+              : '없음',
+        responseHeaders: {
+          'Set-Cookie': setCookieHeaders,
+          'Access-Control-Allow-Credentials': res.getHeader(
+            'Access-Control-Allow-Credentials',
+          ),
+        },
+      });
     });
 
+    // 세션 저장 후 응답 반환
     return result;
   }
 

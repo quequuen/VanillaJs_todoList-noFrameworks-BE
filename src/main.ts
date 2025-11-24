@@ -19,7 +19,7 @@ async function bootstrap() {
   // NestJS에서는 Express 인스턴스에 직접 접근해야 함
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', 1);
-  
+
   devLogger.log('Trust Proxy 설정 완료 (프록시 신뢰 활성화)');
 
   // 전역 예외 필터 설정 (에러 로깅 개선)
@@ -71,22 +71,36 @@ async function bootstrap() {
     session({
       store: sessionStore,
       secret: sessionSecret,
+      name: 'sessionId', // 기본값 'connect.sid' 대신 커스텀 이름
       resave: false,
       saveUninitialized: false,
       proxy: true, // 프록시 뒤에 있을 때 설정 (Render, Vercel 등)
       cookie: {
         httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
-        secure: isProduction, // HTTPS 환경에서만 전송 (크로스 도메인 필수)
+        secure: isProduction ? true : false, // 프로덕션에서는 HTTPS 필수
         sameSite: isProduction ? ('none' as const) : ('lax' as const), // 크로스 도메인 지원 (프로덕션: none, 개발: lax)
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
         domain: undefined, // 크로스 도메인 쿠키 전송을 위해 undefined (도메인 명시하지 않음)
         path: '/', // 모든 경로에서 쿠키 전송
       },
-      name: 'sessionId', // 기본값 'connect.sid' 대신 커스텀 이름
     }),
   );
+  
+  // 세션 설정 로그 (디버깅용)
+  devLogger.log('세션 미들웨어 설정:', {
+    proxy: true,
+    secure: isProduction ? true : false,
+    sameSite: isProduction ? 'none' : 'lax',
+    name: 'sessionId',
+    trustProxy: 'enabled',
+  });
 
-  devLogger.log('세션 미들웨어 설정 완료 (PostgreSQL 스토어 사용)');
+  devLogger.log('세션 미들웨어 설정 완료 (PostgreSQL 스토어 사용)', {
+    isProduction,
+    proxy: true,
+    secure: isProduction ? true : false,
+    sameSite: isProduction ? 'none' : 'lax',
+  });
 
   // CORS 설정
   const allowedOrigins = [
