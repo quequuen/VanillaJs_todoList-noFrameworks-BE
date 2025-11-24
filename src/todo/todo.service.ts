@@ -26,14 +26,24 @@ export class TodoService {
 
   // 생성
   create(data: CreateTodoDto) {
-    const todo = this.todoRepository.create(data);
+    const todoData: any = {
+      ...data,
+      // deadLine Date로 변환
+      deadLine: data.deadLine ? new Date(data.deadLine) : undefined,
+    };
+    const todo = this.todoRepository.create(todoData);
     return this.todoRepository.save(todo);
   }
 
   // 수정
   async update(id: number, data: UpdateTodoDto) {
     await this.ensureExists(id);
-    await this.todoRepository.update(id, data);
+    const updateData: any = {
+      ...data,
+      // deadLine이 string이면 Date로 변환
+      deadLine: data.deadLine ? new Date(data.deadLine) : undefined,
+    };
+    await this.todoRepository.update(id, updateData);
     return this.findOne(id);
   }
 
