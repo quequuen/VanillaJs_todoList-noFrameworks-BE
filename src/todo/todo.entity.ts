@@ -6,12 +6,17 @@
 //   createdAt DateTime @default(now())
 // }
 
-import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+} from 'typeorm';
 // Index 데코레이션은 자주 select 할 것 같은 컬럼을 위주로 하는 것.
 
 @Entity('todo')
 export class Todo {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn()
   id: number;
 
   @CreateDateColumn({ name: 'creation', type: 'timestamp' })

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { Todo } from './todo.entity';
+import { devLogger } from '../utils/logger';
 
 @Injectable()
 export class TodoService {
@@ -25,14 +26,19 @@ export class TodoService {
   }
 
   // 생성
-  create(data: CreateTodoDto) {
-    const todoData: any = {
-      ...data,
-      // deadLine Date로 변환
-      deadLine: data.deadLine ? new Date(data.deadLine) : undefined,
-    };
-    const todo = this.todoRepository.create(todoData);
-    return this.todoRepository.save(todo);
+  async create(data: CreateTodoDto) {
+    try {
+      const todoData: any = {
+        ...data,
+        // deadLine Date로 변환
+        deadLine: data.deadLine ? new Date(data.deadLine) : undefined,
+      };
+      const todo = this.todoRepository.create(todoData);
+      return await this.todoRepository.save(todo);
+    } catch (error) {
+      devLogger.error('Todo 생성 실패:', error);
+      throw error;
+    }
   }
 
   // 수정

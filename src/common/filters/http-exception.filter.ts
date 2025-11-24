@@ -27,21 +27,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
           ? exception.message
           : 'Internal server error';
 
-    // 개발 환경에서만 상세 에러 로그 출력
-    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
-      devLogger.error('서버 오류 발생:', {
-        path: request.url,
-        method: request.method,
-        error: exception instanceof Error ? exception.stack : exception,
-      });
-    }
+    // 모든 에러 로그 출력 (디버깅 개선)
+    devLogger.error('서버 오류 발생:', {
+      statusCode: status,
+      path: request.url,
+      method: request.method,
+      error: exception instanceof Error ? exception.message : String(exception),
+      stack:
+        exception instanceof Error && process.env.NODE_ENV !== 'production'
+          ? exception.stack
+          : undefined,
+    });
 
     response.status(status).json({
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
-      message: typeof message === 'string' ? message : (message as any).message || message,
+      message:
+        typeof message === 'string'
+          ? message
+          : (message as any).message || message,
     });
   }
 }
-
