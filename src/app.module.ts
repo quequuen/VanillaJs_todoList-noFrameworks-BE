@@ -9,6 +9,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { User } from './user/user.entity';
 import { MagicLinkToken } from './auth/entities/magic-link-token.entity';
+import { Todo } from './todo/todo.entity';
 import { devLogger } from './utils/logger';
 import { TodoModule } from './todo/todo.module';
 
@@ -72,7 +73,7 @@ validateEnvironmentVariables();
       username: process.env.DB_USER,
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
-      entities: [User, MagicLinkToken],
+      entities: [User, MagicLinkToken, Todo],
       synchronize: true, // TODO: 테이블 생성 후 false로 변경
       logging: process.env.NODE_ENV === 'development',
     }),
