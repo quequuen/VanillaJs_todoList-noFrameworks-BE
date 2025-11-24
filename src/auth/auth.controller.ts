@@ -259,27 +259,37 @@ export class AuthController {
 
     // 세션에 사용자 정보 저장 (Cookie 기반 인증)
     if (req.session) {
+      devLogger.log('🍪 verify-api: 세션 초기 상태:', {
+        hasSession: !!req.session,
+        sessionId: req.session.id,
+        sessionKeys: Object.keys(req.session),
+        origin: req.headers.origin,
+      });
+
+      // 세션에 사용자 정보 저장
       req.session.userId = result.user.id;
       req.session.email = result.user.email;
       req.session.createdAt = new Date();
 
-      devLogger.log('verify-api: 세션 정보 저장 시작:', {
+      devLogger.log('🍪 verify-api: 세션 데이터 설정 완료:', {
         sessionId: req.session.id,
         userId: req.session.userId,
         email: req.session.email,
-        origin: req.headers.origin,
+        sessionKeys: Object.keys(req.session),
       });
 
       // 세션 저장을 Promise로 대기
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
           if (err) {
-            devLogger.error('verify-api: 세션 저장 실패:', err);
+            devLogger.error('❌ verify-api: 세션 저장 실패:', err);
             reject(err);
           } else {
-            devLogger.log('verify-api: 세션 저장 완료:', {
+            devLogger.log('✅ verify-api: 세션 저장 성공:', {
               sessionId: req.session?.id,
               userId: req.session?.userId,
+              email: req.session?.email,
+              sessionKeys: Object.keys(req.session || {}),
             });
             resolve();
           }
@@ -289,6 +299,18 @@ export class AuthController {
       // 세션 쿠키를 명시적으로 설정 (크로스 도메인 지원)
       const isProduction = process.env.NODE_ENV === 'production';
       const sessionId = req.session.id;
+
+      devLogger.log('🍪 verify-api: 쿠키 설정 시작:', {
+        sessionId,
+        isProduction,
+        cookieOptions: {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: isProduction ? 'none' : 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          path: '/',
+        },
+      });
 
       res.cookie('sessionId', sessionId, {
         httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
@@ -301,16 +323,25 @@ export class AuthController {
 
       // JSON 응답 반환 (쿠키와 함께)
       const setCookieHeaders = res.getHeader('Set-Cookie');
-      devLogger.log('verify-api: 응답 전송 (쿠키 설정 완료):', {
+      const setCookieString =
+        typeof setCookieHeaders === 'string'
+          ? setCookieHeaders
+          : Array.isArray(setCookieHeaders)
+            ? setCookieHeaders.join('; ')
+            : '없음';
+
+      devLogger.log('🍪 verify-api: 응답 전송 (최종 상태):', {
         sessionId: req.session.id,
         userId: req.session.userId,
+        email: req.session.email,
         setCookieHeader: setCookieHeaders,
-        setCookieHeaderString:
-          typeof setCookieHeaders === 'string'
-            ? setCookieHeaders
-            : Array.isArray(setCookieHeaders)
-              ? setCookieHeaders.join('; ')
-              : '없음',
+        setCookieString,
+        responseHeaders: {
+          'Set-Cookie': setCookieString,
+          'Access-Control-Allow-Credentials': res.getHeader(
+            'Access-Control-Allow-Credentials',
+          ),
+        },
       });
 
       res.json(result);
@@ -323,17 +354,19 @@ export class AuthController {
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
   @Get('me')
   getCurrentUser(@Req() req: Request) {
-    // 세션 디버깅 로그
-    devLogger.log('GET /api/auth/me 요청:', {
+    // 세션 디버깅 로그 (상세)
+    devLogger.log('🔍 GET /api/auth/me 요청 시작:', {
       hasSession: !!req.session,
       sessionId: req.session?.id,
       userId: req.session?.userId,
       email: req.session?.email,
+      sessionKeys: req.session ? Object.keys(req.session) : [],
       cookies: req.cookies,
       cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
       sessionCookieName: 'sessionId',
       sessionCookieValue: req.cookies?.sessionId || '없음',
       rawCookieHeader: req.headers.cookie || '없음',
+      cookieHeaderLength: req.headers.cookie?.length || 0,
       headers: {
         cookie: req.headers.cookie,
         origin: req.headers.origin,
@@ -343,21 +376,31 @@ export class AuthController {
     });
 
     if (!req.session) {
-      devLogger.warn('세션이 존재하지 않습니다.');
-      throw new UnauthorizedException('로그인이 필요합니다.');
-    }
-
-    if (!req.session.userId) {
-      devLogger.warn('세션에 userId가 없습니다.', {
-        sessionId: req.session.id,
-        sessionKeys: Object.keys(req.session),
+      devLogger.error('❌ /api/auth/me: 세션이 존재하지 않습니다.', {
+        cookies: req.cookies,
+        cookieHeader: req.headers.cookie,
       });
       throw new UnauthorizedException('로그인이 필요합니다.');
     }
 
-    devLogger.log('사용자 정보 반환:', {
+    if (!req.session.userId) {
+      devLogger.error('❌ /api/auth/me: 세션에 userId가 없습니다.', {
+        sessionId: req.session.id,
+        sessionKeys: Object.keys(req.session),
+        sessionData: {
+          ...req.session,
+          cookie: undefined, // cookie 속성은 너무 길어서 제외
+        },
+        cookies: req.cookies,
+        cookieHeader: req.headers.cookie,
+      });
+      throw new UnauthorizedException('로그인이 필요합니다.');
+    }
+
+    devLogger.log('✅ /api/auth/me: 사용자 정보 반환 성공:', {
       id: req.session.userId,
       email: req.session.email,
+      sessionId: req.session.id,
     });
 
     return {
