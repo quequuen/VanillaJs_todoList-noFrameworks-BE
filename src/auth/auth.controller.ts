@@ -274,9 +274,25 @@ export class AuthController {
   async verifyTokenApi(
     @Query('token') token: string,
     @Req() req: Request,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ) {
+    // 요청 도달 확인 로그
+    devLogger.log('🚀 verify-api 엔드포인트 요청 도달:', {
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      query: req.query,
+      token: token || '없음',
+      origin: req.headers.origin,
+      headers: {
+        'user-agent': req.headers['user-agent'],
+        referer: req.headers.referer,
+        cookie: req.headers.cookie ? '있음' : '없음',
+      },
+    });
+
     if (!token) {
+      devLogger.error('❌ verify-api: 토큰이 없습니다');
       throw new BadRequestException('토큰이 필요합니다.');
     }
 
@@ -374,41 +390,28 @@ export class AuthController {
       });
     });
 
-    // 세션 저장 후 응답 헤더 확인
-    // express-session이 Set-Cookie를 설정했는지 확인
-    const setCookieHeaders = res.getHeader('Set-Cookie');
-    devLogger.log('🍪 verify-api: 응답 전 Set-Cookie 헤더 확인:', {
-      sessionId: req.session?.id,
-      setCookieHeader: setCookieHeaders,
-      hasSetCookie: !!setCookieHeaders,
-      allHeaders: res.getHeaders(),
+    // express-session은 응답이 전송될 때 자동으로 Set-Cookie를 설정함
+    // passthrough: true 모드에서는 NestJS가 응답을 처리하고
+    // express-session 미들웨어가 응답 종료 시 Set-Cookie를 설정함
+
+    // 응답 완료 후 Set-Cookie 헤더 확인을 위한 이벤트 리스너
+    res.once('finish', () => {
+      const setCookieHeaders = res.getHeader('Set-Cookie');
+      devLogger.log('🍪 verify-api: 응답 완료 후 Set-Cookie 헤더:', {
+        sessionId: req.session?.id,
+        setCookieHeader: setCookieHeaders,
+        hasSetCookie: !!setCookieHeaders,
+        'Access-Control-Allow-Origin': res.getHeader(
+          'Access-Control-Allow-Origin',
+        ),
+        'Access-Control-Allow-Credentials': res.getHeader(
+          'Access-Control-Allow-Credentials',
+        ),
+      });
     });
 
-    // CORS 헤더 재확인 및 설정 (세션 저장 후에도 유지)
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    } else {
-      const frontendUrl = process.env.FRONTEND_URL;
-      if (frontendUrl) {
-        res.setHeader('Access-Control-Allow-Origin', frontendUrl);
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-      }
-    }
-
-    // 응답 전 최종 헤더 확인
-    devLogger.log('🍪 verify-api: 최종 응답 헤더:', {
-      'Set-Cookie': res.getHeader('Set-Cookie'),
-      'Access-Control-Allow-Origin': res.getHeader(
-        'Access-Control-Allow-Origin',
-      ),
-      'Access-Control-Allow-Credentials': res.getHeader(
-        'Access-Control-Allow-Credentials',
-      ),
-    });
-
-    // JSON 응답 반환
-    return res.status(200).json(result);
+    // NestJS가 응답을 처리하도록 반환
+    return result;
   }
 
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
