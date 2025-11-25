@@ -296,6 +296,33 @@ export class AuthController {
       existingCookie: req.cookies?.sessionId || req.headers.cookie,
     });
 
+    // ⚠️ 중요: CORS 헤더를 먼저 설정해야 브라우저가 쿠키를 저장함
+    // express-session이 Set-Cookie를 설정할 때 이미 CORS 헤더가 있어야 함
+    const origin = req.headers.origin;
+    if (origin) {
+      // Origin 헤더가 있으면 해당 origin으로 설정
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      devLogger.log('🍪 verify-api: CORS 헤더 설정 (세션 저장 전):', {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+      });
+    } else {
+      // Origin 헤더가 없으면 프론트엔드 URL 사용
+      const frontendUrl = process.env.FRONTEND_URL;
+      if (frontendUrl) {
+        res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        devLogger.log(
+          '🍪 verify-api: CORS 헤더 설정 (Origin 없음, 세션 저장 전):',
+          {
+            'Access-Control-Allow-Origin': frontendUrl,
+            'Access-Control-Allow-Credentials': 'true',
+          },
+        );
+      }
+    }
+
     // 세션을 재생성하여 새 세션 ID 생성 및 쿠키 설정 보장
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => {
@@ -381,32 +408,6 @@ export class AuthController {
         },
       });
     });
-
-    // CORS 헤더 명시적으로 설정 (passthrough 모드에서 보장)
-    const origin = req.headers.origin;
-    if (origin) {
-      // Origin 헤더가 있으면 해당 origin으로 설정
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      devLogger.log('🍪 verify-api: CORS 헤더 설정:', {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Credentials': 'true',
-      });
-    } else {
-      // Origin 헤더가 없으면 프론트엔드 URL 사용
-      const frontendUrl = process.env.FRONTEND_URL;
-      if (frontendUrl) {
-        res.setHeader('Access-Control-Allow-Origin', frontendUrl);
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        devLogger.log(
-          '🍪 verify-api: CORS 헤더 설정 (Origin 없음, 프론트엔드 URL 사용):',
-          {
-            'Access-Control-Allow-Origin': frontendUrl,
-            'Access-Control-Allow-Credentials': 'true',
-          },
-        );
-      }
-    }
 
     // 세션 저장 후 응답 반환
     return result;

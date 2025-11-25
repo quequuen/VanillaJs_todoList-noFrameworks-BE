@@ -85,7 +85,8 @@ export class AuthService {
       }
       // 프론트엔드 URL에 토큰을 쿼리 파라미터로 전달
       // 프론트엔드에서는 이 토큰을 받아서 /api/auth/verify-api를 호출해야 함
-      const url = `${frontendUrl}?token=${token}`;
+      const callbackPath = '/auth/callback';
+      const url = `${frontendUrl}${callbackPath}?token=${token}`;
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 
