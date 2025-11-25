@@ -325,7 +325,8 @@ export class AuthController {
       });
     } else {
       // Origin 헤더가 없으면 프론트엔드 URL 사용
-      const frontendUrl = process.env.FRONTEND_URL;
+      // 끝 슬래시 제거 (CORS 정책에 맞게)
+      const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '');
       if (frontendUrl) {
         res.setHeader('Access-Control-Allow-Origin', frontendUrl);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
