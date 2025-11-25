@@ -19,7 +19,8 @@ import { AuthService } from './auth.service';
 import { SendMagicLinkDto } from './dto/send-magic-link.dto';
 import { devLogger } from '../utils/logger';
 
-@Controller('api/auth')
+// 임시로 로그인 기능 비활성화 - 투두 기능만 사용
+// @Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
@@ -58,7 +59,7 @@ export class AuthController {
   }
 
   //매직링크 발송 (Rate Limiting: 1시간에 10회, 1분에 5회)
-  @Post('send-magic-link')
+  // @Post('send-magic-link')
   @Throttle({
     short: { limit: 5, ttl: 60000 },
     medium: { limit: 10, ttl: 3600000 },
@@ -159,7 +160,7 @@ export class AuthController {
 
   //매직링크 토큰 검증
   // 자동 인증 후 프론트엔드로 리다이렉트
-  @Get('verify')
+  // @Get('verify')
   async verifyToken(
     @Query('token') token: string,
     @Query('redirect') redirectUrl: string | undefined,
@@ -292,7 +293,7 @@ export class AuthController {
   }
 
   // API 호출용 검증 엔드포인트
-  @Get('verify-api')
+  // @Get('verify-api')
   async verifyTokenApi(
     @Query('token') token: string,
     @Req() req: Request,
@@ -470,7 +471,7 @@ export class AuthController {
   }
 
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
-  @Get('me')
+  // @Get('me')
   getCurrentUser(@Req() req: Request) {
     // 세션 디버깅 로그 (상세)
     const sessionCookieValue =
@@ -537,7 +538,7 @@ export class AuthController {
   }
 
   // 로그아웃
-  @Post('logout')
+  // @Post('logout')
   async logout(@Req() req: Request) {
     // 세션 삭제
     if (req.session) {
