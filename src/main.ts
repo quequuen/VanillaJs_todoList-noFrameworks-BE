@@ -67,6 +67,16 @@ async function bootstrap() {
 
   devLogger.log('PostgreSQL 세션 스토어 초기화 완료');
 
+  // 쿠키 설정 - Vercel 프록시를 통해 같은 도메인으로 요청이 가므로 Lax 사용
+  const cookieConfig = {
+    httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
+    secure: isProduction ? true : false, // 프로덕션에서는 HTTPS 필수
+    sameSite: 'lax' as const, // 같은 도메인 요청에서는 Lax 사용
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+    domain: undefined, // 크로스 도메인 쿠키 전송을 위해 undefined (도메인 명시하지 않음)
+    path: '/', // 모든 경로에서 쿠키 전송
+  };
+
   app.use(
     session({
       store: sessionStore,
@@ -75,24 +85,15 @@ async function bootstrap() {
       resave: false,
       saveUninitialized: false,
       proxy: true, // 프록시 뒤에 있을 때 설정 (Render, Vercel 등)
-      cookie: {
-        httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
-        secure: isProduction ? true : false, // 프로덕션에서는 HTTPS 필수
-        // Vercel 프록시를 통해 같은 도메인으로 요청이 가므로 Lax 사용
-        // Lax는 같은 도메인 요청에서 쿠키를 전송하고, 브라우저가 차단하지 않음
-        sameSite: 'lax' as const, // 같은 도메인 요청에서는 Lax 사용
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
-        domain: undefined, // 크로스 도메인 쿠키 전송을 위해 undefined (도메인 명시하지 않음)
-        path: '/', // 모든 경로에서 쿠키 전송
-      },
+      cookie: cookieConfig,
     }),
   );
 
-  // 세션 설정 로그 (디버깅용)
+  // 세션 설정 로그 (디버깅용) - 실제 설정값 반영
   devLogger.log('세션 미들웨어 설정:', {
     proxy: true,
-    secure: isProduction ? true : false,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: cookieConfig.secure,
+    sameSite: cookieConfig.sameSite,
     name: 'sessionId',
     trustProxy: 'enabled',
   });
@@ -100,8 +101,8 @@ async function bootstrap() {
   devLogger.log('세션 미들웨어 설정 완료 (PostgreSQL 스토어 사용)', {
     isProduction,
     proxy: true,
-    secure: isProduction ? true : false,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: cookieConfig.secure,
+    sameSite: cookieConfig.sameSite,
   });
 
   // CORS 설정
