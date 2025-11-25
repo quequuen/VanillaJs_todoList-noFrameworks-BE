@@ -50,6 +50,10 @@ export class TodoController {
   // PUT /api/todo/:id
   @Put(':id')
   update(@Param('id') id: string, @Body() updateTodoDto: UpdateTodoDto) {
+    devLogger.log('PUT /api/todo/:id 요청:', {
+      id,
+      body: updateTodoDto,
+    });
     return this.todoService.update(Number(id), updateTodoDto);
   }
 
