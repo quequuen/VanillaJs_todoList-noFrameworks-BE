@@ -240,14 +240,6 @@ export class AuthController {
         });
       });
 
-      // 리다이렉트 전에 쿠키가 설정되었는지 확인
-      const setCookieHeaders = res.getHeader('Set-Cookie');
-      devLogger.log('✅ verify: 리다이렉트 전 Set-Cookie 헤더:', {
-        sessionId: req.session?.id,
-        setCookieHeader: setCookieHeaders,
-        hasSetCookie: !!setCookieHeaders,
-      });
-
       // CORS 헤더 설정 (크로스 도메인 리다이렉트를 위해)
       // 리다이렉트 후 프론트엔드에서 쿠키를 받을 수 있도록
       const frontendOrigin = safeUrl.match(/^(https?:\/\/[^/]+)/)?.[1];
@@ -260,8 +252,18 @@ export class AuthController {
         });
       }
 
-      // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
+      // 리다이렉트 응답에 Set-Cookie 헤더가 포함되도록 보장
+      // express-session이 리다이렉트 응답에 자동으로 Set-Cookie를 추가하지만,
+      // 크로스 도메인 리다이렉트에서는 브라우저가 이를 저장하지 않을 수 있음
+      devLogger.log(`✅ verify: 세션 설정 완료 - 세션 ID: ${req.session?.id}`);
       devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
+      devLogger.log(
+        `⚠️ 주의: 크로스 도메인 리다이렉트에서는 Set-Cookie가 저장되지 않을 수 있습니다.`,
+      );
+      devLogger.log(
+        `⚠️ 프론트엔드에서 /api/auth/me를 호출하여 세션을 확인하거나, /api/auth/verify-api를 재호출해야 합니다.`,
+      );
+
       res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);
     } catch (error) {
       devLogger.error('토큰 검증 실패:', error);
