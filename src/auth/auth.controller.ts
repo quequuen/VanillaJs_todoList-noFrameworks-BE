@@ -1,8 +1,9 @@
 // 매직링크 api
+// 임시로 로그인 기능 비활성화로 인해 일부 import가 주석처리됨
 import {
-  Controller,
-  Post,
-  Get,
+  // Controller, // 주석처리된 컨트롤러로 인해 사용 안 함
+  // Post, // 주석처리된 엔드포인트로 인해 사용 안 함
+  // Get, // 주석처리된 엔드포인트로 인해 사용 안 함
   Body,
   Query,
   UsePipes,
@@ -201,7 +202,7 @@ export class AuthController {
         req.session.regenerate((err) => {
           if (err) {
             devLogger.error('❌ verify: 세션 재생성 실패:', err);
-            reject(err);
+            reject(err instanceof Error ? err : new Error(String(err)));
             return;
           }
 
@@ -221,7 +222,9 @@ export class AuthController {
           req.session.save((saveErr) => {
             if (saveErr) {
               devLogger.error('❌ verify: 세션 저장 실패:', saveErr);
-              reject(saveErr);
+              reject(
+                saveErr instanceof Error ? saveErr : new Error(String(saveErr)),
+              );
               return;
             }
 
@@ -348,7 +351,7 @@ export class AuthController {
           origin,
           referer: req.headers.referer,
         });
-      } catch (e) {
+      } catch {
         devLogger.warn(
           '🍪 verify-api: Referer에서 origin 추출 실패:',
           req.headers.referer,
@@ -386,7 +389,7 @@ export class AuthController {
       req.session.regenerate((err) => {
         if (err) {
           devLogger.error('❌ verify-api: 세션 재생성 실패:', err);
-          reject(err);
+          reject(err instanceof Error ? err : new Error(String(err)));
           return;
         }
 
@@ -406,7 +409,9 @@ export class AuthController {
         req.session.save((saveErr) => {
           if (saveErr) {
             devLogger.error('❌ verify-api: 세션 저장 실패:', saveErr);
-            reject(saveErr);
+            reject(
+              saveErr instanceof Error ? saveErr : new Error(String(saveErr)),
+            );
             return;
           }
 
@@ -474,7 +479,7 @@ export class AuthController {
   // @Get('me')
   getCurrentUser(@Req() req: Request) {
     // 세션 디버깅 로그 (상세)
-    const sessionCookieValue =
+    const sessionCookieValue: string =
       req.cookies?.sessionId ||
       req.headers.cookie?.match(/sessionId=([^;]+)/)?.[1] ||
       '없음';
