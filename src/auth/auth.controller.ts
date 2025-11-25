@@ -416,6 +416,7 @@ export class AuthController {
     // 응답 완료 후 Set-Cookie 헤더 확인을 위한 이벤트 리스너
     res.once('finish', () => {
       const setCookieHeaders = res.getHeader('Set-Cookie');
+      const responseHeaders = res.getHeaders();
       devLogger.log('🍪 verify-api: 응답 완료 후 Set-Cookie 헤더:', {
         sessionId: req.session?.id,
         setCookieHeader: setCookieHeaders,
@@ -426,7 +427,20 @@ export class AuthController {
         'Access-Control-Allow-Credentials': res.getHeader(
           'Access-Control-Allow-Credentials',
         ),
+        allResponseHeaders: responseHeaders,
       });
+    });
+
+    // 응답 전송 전 명시적으로 쿠키 헤더 확인
+    // express-session이 응답 전에 쿠키를 설정하는지 확인
+    process.nextTick(() => {
+      const setCookieBeforeSend = res.getHeader('Set-Cookie');
+      if (setCookieBeforeSend) {
+        devLogger.log('🍪 verify-api: 응답 전송 전 Set-Cookie 확인:', {
+          sessionId: req.session?.id,
+          setCookieHeader: setCookieBeforeSend,
+        });
+      }
     });
 
     // NestJS가 응답을 처리하도록 반환
