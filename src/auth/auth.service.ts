@@ -83,9 +83,26 @@ export class AuthService {
           );
         }
       }
-      // 프론트엔드 URL에 토큰을 쿼리 파라미터로 전달
-      // 프론트엔드에서는 이 토큰을 받아서 /api/auth/verify-api를 호출해야 함
-      const url = `${frontendUrl}?token=${token}`;
+      // ⚠️ Vercel 프록시가 Set-Cookie 헤더를 전달하지 않는 문제 해결:
+      // 백엔드 URL로 직접 매직링크를 생성하여 브라우저가 직접 백엔드로 요청하도록 함
+      // GET /api/auth/verify 엔드포인트가 세션을 설정하고 프론트엔드로 리다이렉트함
+      const backendUrl = process.env.BACKEND_URL;
+      let magicLinkUrl: string;
+
+      if (backendUrl && frontendUrl) {
+        // 백엔드 URL이 설정되어 있으면 백엔드로 직접 요청
+        const cleanBackendUrl = backendUrl.replace(/\/$/, ''); // 끝 슬래시 제거
+        magicLinkUrl = `${cleanBackendUrl}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(frontendUrl)}`;
+        devLogger.log(`백엔드 URL로 매직링크 생성: ${magicLinkUrl}`);
+      } else {
+        // 백엔드 URL이 없으면 기존 방식 (프론트엔드 URL)
+        magicLinkUrl = frontendUrl ? `${frontendUrl}?token=${token}` : '';
+        if (!backendUrl) {
+          devLogger.warn('BACKEND_URL이 설정되지 않아 프론트엔드 URL 사용');
+        }
+      }
+
+      const url = magicLinkUrl;
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 
