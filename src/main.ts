@@ -78,7 +78,9 @@ async function bootstrap() {
       cookie: {
         httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
         secure: isProduction ? true : false, // 프로덕션에서는 HTTPS 필수
-        sameSite: isProduction ? ('none' as const) : ('lax' as const), // 크로스 도메인 지원 (프로덕션: none, 개발: lax)
+        // Vercel 프록시를 통해 같은 도메인으로 요청이 가므로 Lax 사용
+        // Lax는 같은 도메인 요청에서 쿠키를 전송하고, 브라우저가 차단하지 않음
+        sameSite: 'lax' as const, // 같은 도메인 요청에서는 Lax 사용
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
         domain: undefined, // 크로스 도메인 쿠키 전송을 위해 undefined (도메인 명시하지 않음)
         path: '/', // 모든 경로에서 쿠키 전송
