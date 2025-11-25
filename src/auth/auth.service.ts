@@ -83,26 +83,41 @@ export class AuthService {
           );
         }
       }
-      // ⚠️ Vercel 프록시가 Set-Cookie 헤더를 전달하지 않는 문제 해결:
-      // 백엔드 URL로 직접 매직링크를 생성하여 브라우저가 직접 백엔드로 요청하도록 함
-      // GET /api/auth/verify 엔드포인트가 세션을 설정하고 프론트엔드로 리다이렉트함
+      // 매직링크는 백엔드의 /api/auth/verify 엔드포인트로 직접 연결
+      // 브라우저가 직접 백엔드(HTTPS)로 요청하여 쿠키를 받은 후 프론트엔드로 리다이렉트
+      // Render는 HTTPS를 지원하므로 "안전하지 않은 URL" 문제 없음
       const backendUrl = process.env.BACKEND_URL;
-      let magicLinkUrl: string;
+      let url: string;
 
-      if (backendUrl && frontendUrl) {
-        // 백엔드 URL이 설정되어 있으면 백엔드로 직접 요청
-        const cleanBackendUrl = backendUrl.replace(/\/$/, ''); // 끝 슬래시 제거
-        magicLinkUrl = `${cleanBackendUrl}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(frontendUrl)}`;
-        devLogger.log(`백엔드 URL로 매직링크 생성: ${magicLinkUrl}`);
+      if (!backendUrl) {
+        devLogger.warn(
+          'BACKEND_URL이 설정되지 않았습니다. 프론트엔드 URL 사용',
+        );
+        url = frontendUrl ? `${frontendUrl}?token=${token}` : '';
       } else {
-        // 백엔드 URL이 없으면 기존 방식 (프론트엔드 URL)
-        magicLinkUrl = frontendUrl ? `${frontendUrl}?token=${token}` : '';
-        if (!backendUrl) {
-          devLogger.warn('BACKEND_URL이 설정되지 않아 프론트엔드 URL 사용');
-        }
-      }
+        // 백엔드 URL 정리
+        const cleanBackendUrl = backendUrl.replace(/\/$/, '');
 
-      const url = magicLinkUrl;
+        // HTTPS 강제 (프로덕션 환경에서)
+        let finalBackendUrl = cleanBackendUrl;
+        if (
+          process.env.NODE_ENV === 'production' &&
+          cleanBackendUrl.startsWith('http://')
+        ) {
+          finalBackendUrl = cleanBackendUrl.replace('http://', 'https://');
+          devLogger.warn(
+            `프로덕션 환경에서 HTTP를 HTTPS로 변환: ${finalBackendUrl}`,
+          );
+        }
+
+        // 백엔드의 verify 엔드포인트로 직접 연결
+        const redirectParam = frontendUrl
+          ? encodeURIComponent(frontendUrl)
+          : '';
+        url = `${finalBackendUrl}/api/auth/verify?token=${token}${redirectParam ? `&redirect=${redirectParam}` : ''}`;
+
+        devLogger.log(`매직링크 생성 (백엔드 직접 연결): ${url}`);
+      }
 
       devLogger.log(`Magic Link URL for ${email}: ${url}`);
 
