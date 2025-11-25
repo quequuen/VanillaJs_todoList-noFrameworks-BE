@@ -240,6 +240,26 @@ export class AuthController {
         });
       });
 
+      // 리다이렉트 전에 쿠키가 설정되었는지 확인
+      const setCookieHeaders = res.getHeader('Set-Cookie');
+      devLogger.log('✅ verify: 리다이렉트 전 Set-Cookie 헤더:', {
+        sessionId: req.session?.id,
+        setCookieHeader: setCookieHeaders,
+        hasSetCookie: !!setCookieHeaders,
+      });
+
+      // CORS 헤더 설정 (크로스 도메인 리다이렉트를 위해)
+      // 리다이렉트 후 프론트엔드에서 쿠키를 받을 수 있도록
+      const frontendOrigin = safeUrl.match(/^(https?:\/\/[^/]+)/)?.[1];
+      if (frontendOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', frontendOrigin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        devLogger.log('✅ verify: CORS 헤더 설정:', {
+          'Access-Control-Allow-Origin': frontendOrigin,
+          'Access-Control-Allow-Credentials': 'true',
+        });
+      }
+
       // 리다이렉트 URL 검증 (오픈 리다이렉트 공격 방지)
       devLogger.log(`인증 완료 후 리다이렉트: ${safeUrl}`);
       res.redirect(`${safeUrl}?success=인증이 완료되었습니다.`);

@@ -67,11 +67,12 @@ async function bootstrap() {
 
   devLogger.log('PostgreSQL 세션 스토어 초기화 완료');
 
-  // 쿠키 설정 - Vercel 프록시를 통해 같은 도메인으로 요청이 가므로 Lax 사용
+  // 쿠키 설정 - 크로스 도메인 리다이렉트를 위해 SameSite=None 필요
+  const sameSiteValue = isProduction ? ('none' as const) : ('lax' as const);
   const cookieConfig = {
     httpOnly: true, // JavaScript 접근 차단 (XSS 방지)
-    secure: isProduction ? true : false, // 프로덕션에서는 HTTPS 필수
-    sameSite: 'lax' as const, // 같은 도메인 요청에서는 Lax 사용
+    secure: isProduction ? true : false, // 프로덕션에서는 HTTPS 필수 (SameSite=None일 때 필수)
+    sameSite: sameSiteValue, // 크로스 도메인 리다이렉트를 위해 None 사용
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
     domain: undefined, // 크로스 도메인 쿠키 전송을 위해 undefined (도메인 명시하지 않음)
     path: '/', // 모든 경로에서 쿠키 전송
