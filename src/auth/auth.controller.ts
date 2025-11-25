@@ -314,7 +314,25 @@ export class AuthController {
 
     // ⚠️ 중요: CORS 헤더를 먼저 설정해야 브라우저가 쿠키를 저장함
     // express-session이 Set-Cookie를 설정할 때 이미 CORS 헤더가 있어야 함
-    const origin = req.headers.origin;
+    let origin = req.headers.origin;
+
+    // Origin 헤더가 없으면 Referer에서 추출 시도 (Vercel 프록시 등)
+    if (!origin && req.headers.referer) {
+      try {
+        const refererUrl = new URL(req.headers.referer);
+        origin = refererUrl.origin;
+        devLogger.log('🍪 verify-api: Referer에서 origin 추출:', {
+          origin,
+          referer: req.headers.referer,
+        });
+      } catch (e) {
+        devLogger.warn(
+          '🍪 verify-api: Referer에서 origin 추출 실패:',
+          req.headers.referer,
+        );
+      }
+    }
+
     if (origin) {
       // Origin 헤더가 있으면 해당 origin으로 설정
       res.setHeader('Access-Control-Allow-Origin', origin);
@@ -331,7 +349,7 @@ export class AuthController {
         res.setHeader('Access-Control-Allow-Origin', frontendUrl);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         devLogger.log(
-          '🍪 verify-api: CORS 헤더 설정 (Origin 없음, 세션 저장 전):',
+          '🍪 verify-api: CORS 헤더 설정 (Origin 없음, 프론트엔드 URL 사용):',
           {
             'Access-Control-Allow-Origin': frontendUrl,
             'Access-Control-Allow-Credentials': 'true',
