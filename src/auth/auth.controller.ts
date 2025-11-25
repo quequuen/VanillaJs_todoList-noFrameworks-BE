@@ -274,7 +274,7 @@ export class AuthController {
   async verifyTokenApi(
     @Query('token') token: string,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     if (!token) {
       throw new BadRequestException('토큰이 필요합니다.');
@@ -374,43 +374,41 @@ export class AuthController {
       });
     });
 
-    // 세션 저장 후 즉시 Set-Cookie 헤더 확인 (디버깅용)
-    // express-session은 세션이 변경되면 자동으로 쿠키를 설정함
-    const immediateHeaders = res.getHeader('Set-Cookie');
-    devLogger.log('🍪 verify-api: 세션 저장 직후 Set-Cookie 헤더:', {
+    // 세션 저장 후 응답 헤더 확인
+    // express-session이 Set-Cookie를 설정했는지 확인
+    const setCookieHeaders = res.getHeader('Set-Cookie');
+    devLogger.log('🍪 verify-api: 응답 전 Set-Cookie 헤더 확인:', {
       sessionId: req.session?.id,
-      hasSetCookie: !!immediateHeaders,
-      setCookieHeader: immediateHeaders,
+      setCookieHeader: setCookieHeaders,
+      hasSetCookie: !!setCookieHeaders,
+      allHeaders: res.getHeaders(),
     });
 
-    // express-session은 응답 종료 시점에 쿠키를 설정하므로,
-    // 응답 완료 이벤트를 감지하여 Set-Cookie 헤더 확인
-    res.once('finish', () => {
-      const setCookieHeaders = res.getHeader('Set-Cookie');
-      devLogger.log('🍪 verify-api: 응답 완료 후 Set-Cookie 헤더:', {
-        sessionId: req.session?.id,
-        setCookieHeader: setCookieHeaders,
-        hasSetCookie: !!setCookieHeaders,
-        cookieValue:
-          typeof setCookieHeaders === 'string'
-            ? setCookieHeaders
-            : Array.isArray(setCookieHeaders)
-              ? setCookieHeaders.join('; ')
-              : '없음',
-        responseHeaders: {
-          'Set-Cookie': setCookieHeaders,
-          'Access-Control-Allow-Origin': res.getHeader(
-            'Access-Control-Allow-Origin',
-          ),
-          'Access-Control-Allow-Credentials': res.getHeader(
-            'Access-Control-Allow-Credentials',
-          ),
-        },
-      });
+    // CORS 헤더 재확인 및 설정 (세션 저장 후에도 유지)
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else {
+      const frontendUrl = process.env.FRONTEND_URL;
+      if (frontendUrl) {
+        res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      }
+    }
+
+    // 응답 전 최종 헤더 확인
+    devLogger.log('🍪 verify-api: 최종 응답 헤더:', {
+      'Set-Cookie': res.getHeader('Set-Cookie'),
+      'Access-Control-Allow-Origin': res.getHeader(
+        'Access-Control-Allow-Origin',
+      ),
+      'Access-Control-Allow-Credentials': res.getHeader(
+        'Access-Control-Allow-Credentials',
+      ),
     });
 
-    // 세션 저장 후 응답 반환
-    return result;
+    // JSON 응답 반환
+    return res.status(200).json(result);
   }
 
   // 현재 로그인한 사용자 정보 조회 (세션 기반)
