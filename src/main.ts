@@ -26,11 +26,13 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // Validation Pipe 전역 설정
+  // whitelist: true - DTO에 정의되지 않은 필드 자동 제거 (보안)
+  // forbidNonWhitelisted: false - 정의되지 않은 필드가 있어도 에러 발생하지 않음 (필드만 제거)
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
+      whitelist: true, // DTO에 정의된 필드만 남김 (보안 강화)
+      forbidNonWhitelisted: false, // 정의되지 않은 필드는 조용히 제거만 함
     }),
   );
 
